@@ -8,7 +8,6 @@ using DarkRift.Server;
 using DbConnectorPlugin;
 using MongoDB.Driver;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace LoginPlugin
 {
@@ -20,6 +19,7 @@ namespace LoginPlugin
         {
             new Command ("AllowAddUser", "Allow Users to be added to the Database [AllowAddUser on/off]", "", AllowAddUserCommand),
             new Command("AddUser", "Adds a User to the Database [AddUser name password]", "", AddUserCommand),
+            new Command("DelUser", "Deletes a User from the Database [DelUser name]", "", DelUserCommand),
             new Command("LPDebug", "Enables Plugin Debug", "", DebugCommand),
             new Command("Online", "Logs number of online users", "", UsersLoggedInCommand),
             new Command("LoggedIn", "Logs number of online users", "", UsersOnlineCommand)
@@ -41,7 +41,7 @@ namespace LoginPlugin
 
         // Connects the clients Global ID with his username
         public Dictionary<uint, string> UsersLoggedIn = new Dictionary<uint, string>();
-        private Dictionary<uint, RSAParameters> _keys = new Dictionary<uint, RSAParameters>();
+        private readonly Dictionary<uint, RSAParameters> _keys = new Dictionary<uint, RSAParameters>();
 
         private const string ConfigPath = @"Plugins\Login.xml";
         private DbConnector _dbConnector;
@@ -150,7 +150,7 @@ namespace LoginPlugin
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("LoginPlugin: Invalid Login data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
+                    WriteEvent("Invalid Login data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
 
                     // Return Error 0 for Invalid Data Packages Recieved
                     var writer = new DarkRiftWriter();
@@ -162,6 +162,7 @@ namespace LoginPlugin
                 try
                 {
                     var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
+
                     if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                     {
                         UsersLoggedIn[client.GlobalID] = username;
@@ -229,7 +230,7 @@ namespace LoginPlugin
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("LoginPlugin: Invalid AddUser data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
+                    WriteEvent("Invalid AddUser data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
 
                     // Return Error 0 for Invalid Data Recieved
                     var writer = new DarkRiftWriter();
@@ -305,6 +306,11 @@ namespace LoginPlugin
 
         private void AddUserCommand(object sender, CommandEventArgs e)
         {
+            if (_dbConnector == null)
+            {
+                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+            }
+
             if (e.Arguments.Length != 2)
             {
                 WriteEvent("Invalid arguments. Enter [AddUser name password].", LogType.Warning);
@@ -323,6 +329,30 @@ namespace LoginPlugin
                 else
                 {
                     WriteEvent("Username already in use.", LogType.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteEvent("Database Error: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
+            }
+        }
+
+        private void DelUserCommand(object sender, CommandEventArgs e)
+        {
+            if (_dbConnector == null)
+            {
+                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+            }
+
+            var username = e.Arguments[0];
+
+            try
+            {
+                _dbConnector.Users.DeleteOne(u => u.Username == username);
+
+                if (_debug)
+                {
+                    WriteEvent("Removed User: " + username, LogType.Info);
                 }
             }
             catch (Exception ex)

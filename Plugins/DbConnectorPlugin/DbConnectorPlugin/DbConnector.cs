@@ -12,8 +12,7 @@ namespace DbConnectorPlugin
         public override Version Version => new Version(1, 0, 0);
         public override bool ThreadSafe => false;
 
-        public IMongoCollection<Message> Messages;
-        public IMongoCollection<User> Users;
+        public IMongoCollection<User> Users { get; private set; }
 
         private const string ConfigPath = @"Plugins\DbConnector.xml";
         private readonly IMongoDatabase _database;

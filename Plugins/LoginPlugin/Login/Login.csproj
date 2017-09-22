@@ -41,7 +41,7 @@
     </Reference>
     <Reference Include="DbConnector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Plugins\DbConnector.dll</HintPath>
+      <HintPath>..\..\..\..\Darkrift 2 Server\Plugins\DbConnector.dll</HintPath>
     </Reference>
     <Reference Include="MongoDB.Bson">
       <HintPath>..\..\..\Lib\MongoDB.Bson.dll</HintPath>
