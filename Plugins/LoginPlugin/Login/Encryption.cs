@@ -22,7 +22,8 @@ namespace LoginPlugin
             {
                 rsa.PersistKeyInCsp = false;
                 rsa.ImportParameters(key);
-                decrypted = rsa.Decrypt(input, false);
+                // make sure your targeted systems support fOAEP, otherwise put the parameter to false.
+                decrypted = rsa.Decrypt(input, true);
             }
             return Encoding.UTF8.GetString(decrypted);
         }

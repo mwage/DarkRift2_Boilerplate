@@ -93,7 +93,10 @@ namespace LoginPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
+            // Empty name == online, but not logged in
             UsersLoggedIn[e.Client.GlobalID] = "";
+
+            // Generate RSA keypair and send client his public key to encrypt the password
             _keys[e.Client.GlobalID] = Encryption.GenerateKeys(out var publicKey);
 
             var writer = new DarkRiftWriter();
@@ -112,6 +115,7 @@ namespace LoginPlugin
 
         private void OnPlayerDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
+            // log out the User and remove his private key on disconnect
             if (UsersLoggedIn.ContainsKey(e.Client.GlobalID))
             {
                 UsersLoggedIn.Remove(e.Client.GlobalID);
@@ -161,8 +165,10 @@ namespace LoginPlugin
                 
                 try
                 {
+                    // Search for User with the received username
                     var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
 
+                    // Check if password matches
                     if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                     {
                         UsersLoggedIn[client.GlobalID] = username;
@@ -223,7 +229,6 @@ namespace LoginPlugin
                 {
                     var reader = message.GetReader();
                     username = reader.ReadString();
-                    
                     password = BCrypt.Net.BCrypt.HashPassword(
                         Encryption.Decrypt(reader.ReadBytes(), _keys[client.GlobalID])
                         , 10);
@@ -273,11 +278,13 @@ namespace LoginPlugin
 
         private bool UsernameAvailable(string username)
         {
-            return _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username) == null;
+            // Returns true if username is available, false if taken
+            return !_dbConnector.Users.AsQueryable().Any(u => u.Username == username);
         }
 
         private void AddNewUser(string username, string password)
         {
+            // Adds user to the database
             _dbConnector.Users.InsertOne(new User(username, password));
 
             if (_debug)

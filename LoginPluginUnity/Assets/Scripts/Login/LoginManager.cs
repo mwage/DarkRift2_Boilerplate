@@ -12,9 +12,9 @@ namespace Login
         public static bool IsLoggedIn { private set; get; }
 
         public delegate void SuccessfulLoginEventHandler();
-        public delegate void FailedLoginEventHandler(int reason);
+        public delegate void FailedLoginEventHandler(byte errorId);
         public delegate void SuccessfulAddUserEventHandler();
-        public delegate void FailedAddUserEventHandler(int reason);
+        public delegate void FailedAddUserEventHandler(byte errorId);
 
         public static event SuccessfulLoginEventHandler onSuccessfulLogin;
         public static event FailedLoginEventHandler onFailedLogin;
@@ -30,6 +30,8 @@ namespace Login
         {
             GameControl.Client.MessageReceived -= OnDataHandler;
         }
+
+        #region DarkRift Calls
 
         public static void Login(string username, string password)
         {
@@ -56,6 +58,7 @@ namespace Login
             IsLoggedIn = false;
             GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.LogoutUser, new DarkRiftWriter()), SendMode.Reliable);
         }
+        #endregion
 
         private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
         {

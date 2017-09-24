@@ -87,9 +87,9 @@ namespace Login
 
         #region ProcessServerResponse
 
-        private void FailedLogin(int reason)
+        private void FailedLogin(byte errorId)
         {
-            if (reason == 1)
+            if (errorId == 1)
             {
                 PasswordInput.text = "";
                 LoginScreen("Username/Password Combination unknown", Color.red);
@@ -100,9 +100,9 @@ namespace Login
             }
         }
 
-        private void FailedAddUser(int reason)
+        private void FailedAddUser(byte errorId)
         {
-            if (reason == 1)
+            if (errorId == 1)
             {
                 LoginScreen("Username already taken.", Color.red);
             }

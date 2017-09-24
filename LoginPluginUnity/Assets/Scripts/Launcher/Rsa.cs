@@ -42,7 +42,8 @@ namespace Launcher
             {
                 rsa.PersistKeyInCsp = false;
                 rsa.ImportParameters(key);
-                encrypted = rsa.Encrypt(input, false);
+                // make sure your targeted systems support fOAEP, otherwise put the parameter to false.
+                encrypted = rsa.Encrypt(input, true);
             }
             return encrypted;
         }
