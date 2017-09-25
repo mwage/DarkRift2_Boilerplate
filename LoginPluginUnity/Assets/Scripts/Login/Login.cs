@@ -106,6 +106,10 @@ namespace Login
             {
                 LoginScreen("Username already taken.", Color.red);
             }
+            else if (errorId == 3)
+            {
+                LoginScreen("Already logged in!", Color.red);
+            }
             else
             {
                 // could differentiate between 0 (Wrong Information) and 2 (Database Error).

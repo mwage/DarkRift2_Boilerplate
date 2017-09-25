@@ -162,7 +162,17 @@ namespace LoginPlugin
                     client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
                     return;
                 }
-                
+
+                if (UsersLoggedIn.ContainsValue(username))
+                {
+                    // Username is already in use -> return Error 3
+                    var writer = new DarkRiftWriter();
+                    writer.Write((byte)3);
+                    client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
+                    return;
+                }
+
+
                 try
                 {
                     // Search for User with the received username
