@@ -13,7 +13,7 @@ The user encrypts his password with the public key, sends it to the server, wher
 and either salt-hashes it with BCrypt before storing it in the database or just verifys it (BCrypt.Verify()).
 
 This should make it a lot more secure than the old DR1 one, but if you want to actually use it outside of basic testing, 
-you might want to revise the security and make sure everything is really as secure as the needed to meet your demands.
+you might want to revise the security and make sure everything is really as secure as the needed to meet your demands. For example you'll need to address the lack of identification in it's current state (I might include something on this later on).
 
 I take no responsibility for any complications/problems caused by use of this plugin.
 
