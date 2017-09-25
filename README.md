@@ -25,21 +25,17 @@ I take no responsibility for any complications/problems caused by use of this pl
 3) Import the Darkrift 2 package.
 4) Open the Launcher Scene and make sure the UnityClient Script is attached to the GameManager Object
 5) Extract the "DarkRift Server.zip" that got added to the Assets/DarkRift folder to a location outside the Unity project.
-6) Inside the DarkRift Server folder, create a new one called "Plugins"
-7) Open the DbConnector solution
-8) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib
-9) Install MongoDB package with the NuGet package manager (i just used the first one with 1million+ downlaods
-10) Build the solution
-11) Move the DbConnector.dll to DarkRiftServer/Plugins and the 3 Mongo .dlls and the System.Runtime one to DarkRiftServer/lib
+6) Inside the "DarkRift Server" folder, create a new folder called "Plugins"
+7) Open the Plugins/Plugins.sln solution
+8) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib to both projects
+9) Install MongoDB package with the NuGet package manager into both projects (just use the first one with 1million+ downlaods)
+10) You might have to install the BCrypt Nuget package for the Login Project (I used BCrypt-Official)
+11) Add the DbConnector reference to the Login Project
+12) Build the solution
+13) From the Login/bin/Debug folder: Copy DbConnector.dll and Login.dll into DarkRiftServer/Plugins and the 3 Mongo, the System.Runtime and the BCrypt dll into DarkRiftServer/lib
 
 You should be able to run the server without errors now. 
 Ignore the warning, it just reminds you that the connection path is set to default ("mongodb://localhost:27017").
 
-12) open the LoginPlugin solution
-13) Import the missing references (you can just import them from DarkRiftServer/Lib
-14) You might have to install the BCrypt Nuget package (I used BCrypt-Official)
-15) Build the solution
-16) Move Login.dll to DarkRiftServer/Plugins and BCrypt.Net.dll to DarkRiftServer/Lib
-
-With that the setup should complete. Install MongoDB if you haven't and run mongod.exe with its default settings.
+With that the setup should complete. Install MongoDB if you don't have it and run mongod.exe.
 Run the DarkRift.Server.Console.exe and run the Launcher in your Unity scene and you should be able to Register/Login/Logout.
