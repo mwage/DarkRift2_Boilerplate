@@ -1,4 +1,15 @@
-# DarkRift2_Login-Plugin
+# DarkRift2_Bolierplate
+
+Currently adding Friend-, Chat- and Roomsystem.
+
+
+
+
+
+
+
+
+
 Login Plugin + MongoDB Connector for DarkRift 2
 
 Free to use, copy and change to suit your needs.
