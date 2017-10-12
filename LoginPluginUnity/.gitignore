@@ -31,4 +31,10 @@ sysinfo.txt
 
 # Builds
 *.apk
-*.unitypackage
+
+#custom
+/Assets/DarkRift
+/Assets/DarkRift.meta
+/Assets/Resources/PublicKey.xml
+/Assets/Resources/PublicKey.xml.meta
+/Logs
