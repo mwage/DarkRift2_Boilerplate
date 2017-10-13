@@ -58,20 +58,15 @@ namespace Menus
             RoomManager.GetOpenRooms();
         }
 
-        public void CreateRoom()
+        public void OpenCreateRoom()
         {
             OutOfLobby.SetActive(false);
             CreatingLobby.SetActive(true);
         }
 
-        public void CreateRoomRLR()
+        public void CreateRoom()
         {
-            RoomManager.CreateRoom(_roomNameInput.CustomRoomName, GameType.RunlingRun, true, PlayerColor.Green);
-        }
-
-        public void CreateRoomSLA()
-        {
-            RoomManager.CreateRoom(_roomNameInput.CustomRoomName, GameType.Arena, true, PlayerColor.Green);
+            RoomManager.CreateRoom(_roomNameInput.CustomRoomName, true);
         }
 
         public void LeaveRoom()
@@ -79,29 +74,7 @@ namespace Menus
             RoomManager.LeaveRoom();
         }
 
-        public void StartGame()
-        {
-            //            PhotonNetwork.room.IsOpen = false;
-            //            PhotonNetwork.room.IsVisible = false;
-            //
-            //            switch ((string) PhotonNetwork.room.CustomProperties["GM"])
-            //            {
-            //                case "RR":
-            //                    Debug.Log("Start RLR Game");
-            //                    PhotonNetwork.LoadLevel(3);
-            //                    break;
-            //                case "AR":
-            //                    Debug.Log("Start Arena Game");
-            //                    PhotonNetwork.LoadLevel(5);
-            //                    break;
-            //                default:
-            //                    Debug.Log("Couldn't load game, invalid selection");
-            //                    PhotonNetwork.LoadLevel(2);
-            //                    break;
-            //            }
-        }
-
-        public void Back()
+        public void BackToRoomlist()
         {
             CreatingLobby.SetActive(false);
             OutOfLobby.SetActive(true);

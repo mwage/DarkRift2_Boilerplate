@@ -39,6 +39,7 @@ namespace Chat
             _chatLayoutGroup.Destroy();
             _channelLayoutGroup.Destroy();
             _friendLayoutGroup.Destroy();
+
             ChatManager.onActivateChat -= ActivateInputField;
         }
 

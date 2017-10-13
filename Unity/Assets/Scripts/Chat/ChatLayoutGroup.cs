@@ -11,9 +11,9 @@ namespace Chat
         [SerializeField] private ScrollRect _scrollRect;
 
         private readonly Dictionary<string, List<ChatListing>> _privateMessages = new Dictionary<string, List<ChatListing>>();
-        private Dictionary<string, List<ChatListing>> _groupMessages = new Dictionary<string, List<ChatListing>>();
-        private List<ChatListing> _roomMessages = new List<ChatListing>();
-        private List<ChatListing> _serverMessages = new List<ChatListing>();
+        private readonly Dictionary<string, List<ChatListing>> _groupMessages = new Dictionary<string, List<ChatListing>>();
+        private readonly List<ChatListing> _roomMessages = new List<ChatListing>();
+        private readonly List<ChatListing> _serverMessages = new List<ChatListing>();
 
         public void Initialize()
         {

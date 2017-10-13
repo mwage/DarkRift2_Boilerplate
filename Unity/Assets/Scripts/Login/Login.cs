@@ -52,10 +52,6 @@ namespace Login
 
             LoginButton.interactable = condition;
             AddUserButton.interactable = condition;
-
-            // Maybe add an option to try to reconnect
-            if (!GameControl.Client.Connected)
-                Debug.Log("not connected");
         }
 
         public void OfflineMode()

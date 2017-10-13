@@ -597,9 +597,9 @@ PlayerSettings:
   cloudServicesEnabled:
     UNet: 1
   facebookSdkVersion: 7.9.4
-  apiCompatibilityLevel: 2
+  apiCompatibilityLevel: 3
   cloudProjectId: eb3e83a5-236c-4339-ba47-7c0990f3bb81
-  projectName: LoginPluginUnity
+  projectName: Darkrift-Boilerplate
   organizationId: testing-stuff
   cloudEnabled: 0
   enableNativePlatformBackendsForNewInputSystem: 0

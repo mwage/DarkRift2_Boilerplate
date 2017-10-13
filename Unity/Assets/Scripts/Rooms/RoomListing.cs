@@ -6,7 +6,6 @@ namespace Rooms
     public class RoomListing : MonoBehaviour
     {
         public Text RoomNameText;
-        public Text GameModeText;
         public Text PlayerCountText;
 
         public Room Room { get; private set; }
@@ -21,9 +20,8 @@ namespace Rooms
         public void Initialize(Room room)
         {
             Room = room;
-            _button.onClick.AddListener(() => RoomManager.JoinRoom(Room.Id, PlayerColor.Green));
+            _button.onClick.AddListener(() => RoomManager.JoinRoom(Room.Id));
             RoomNameText.text = Room.Name;
-            GameModeText.text = Room.GameType.ToString().GetFriendlyName();
             PlayerCountText.text = Room.CurrentPlayers + "/" + Room.MaxPlayers;
         }
 

@@ -1,6 +1,5 @@
 ﻿using Login;
 using Rooms;
-using UI.Main_Menu;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -14,16 +13,12 @@ namespace Menus
         public Text LogoutButtonText;
 
         private MainMenuManager _mainMenuManager;
-        private OptionsMenu _optionsMenu;
-        private SoloMenu _soloMenu;
-        private MultiplayerMenu _multiplayerMenu;
+        private RoomMenu _roomMenu;
 
         private void Awake()
         {
             _mainMenuManager = transform.parent.GetComponent<MainMenuManager>();
-            _optionsMenu = _mainMenuManager.OptionsMenu;
-            _soloMenu = _mainMenuManager.SoloMenu;
-            _multiplayerMenu = _mainMenuManager.MultiplayerMenu;
+            _roomMenu = _mainMenuManager.RoomMenu;
         }
 
         private void Update()
@@ -35,29 +30,17 @@ namespace Menus
 
         #region Buttons
 
-        public void Multiplayer()
+        public void Rooms()
         {
             if (LoginManager.IsLoggedIn)
             {
                 gameObject.SetActive(false);
-                _multiplayerMenu.gameObject.SetActive(true);
+                _roomMenu.gameObject.SetActive(true);
             }
             else
             {
                 SceneManager.LoadScene("Login");
             }
-        }
-
-        public void Solo()
-        {
-            gameObject.SetActive(false);
-            _soloMenu.gameObject.SetActive(true);
-        }
-
-        public void Options()
-        {
-            gameObject.SetActive(false);
-            _optionsMenu.gameObject.SetActive(true);
         }
 
         public void Logout()

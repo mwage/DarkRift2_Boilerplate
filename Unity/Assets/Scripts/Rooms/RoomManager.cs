@@ -42,23 +42,20 @@ namespace Rooms
 
         #region Network Calls
 
-        public static void CreateRoom(string roomname, GameType gameType, bool isVisible, PlayerColor color)
+        public static void CreateRoom(string roomname, bool isVisible)
         {
             var writer = new DarkRiftWriter();
             writer.Write(roomname);
-            writer.Write((byte)gameType);
             writer.Write(isVisible);
-            writer.Write((byte)color);
 
             GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Create, writer),
                 SendMode.Reliable);
         }
 
-        public static void JoinRoom(ushort roomId, PlayerColor color)
+        public static void JoinRoom(ushort roomId)
         {
             var writer = new DarkRiftWriter();
             writer.Write(roomId);
-            writer.Write((byte)color);
 
             GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Join, writer),
                 SendMode.Reliable);
