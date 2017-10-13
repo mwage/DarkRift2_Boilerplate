@@ -1,15 +1,17 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
+using Chat;
+using UnityEngine;
 using DarkRift;
 using DarkRift.Client;
 using DarkRiftTags;
 using Launcher;
-using UnityEngine;
 
 namespace Login
 {
     public class LoginManager : MonoBehaviour
     {
-        public static bool IsLoggedIn { private set; get; }
+        public static bool IsLoggedIn { get; private set; }
 
         public delegate void SuccessfulLoginEventHandler();
         public delegate void FailedLoginEventHandler(byte errorId);
@@ -31,31 +33,31 @@ namespace Login
             GameControl.Client.MessageReceived -= OnDataHandler;
         }
 
-        #region DarkRift Calls
+        #region Network Calls
 
         public static void Login(string username, string password)
         {
             var writer = new DarkRiftWriter();
             writer.Write(username);
-            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password), Rsa.Key));
+            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-            var message = new TagSubjectMessage(Tags.Login, LoginSubjects.LoginUser, writer);
-            GameControl.Client.SendMessage(message, SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.LoginUser, writer), SendMode.Reliable);
         }
 
         public static void AddUser(string username, string password)
         {
             var writer = new DarkRiftWriter();
             writer.Write(username);
-            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password), Rsa.Key));
+            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-            var message = new TagSubjectMessage(Tags.Login, LoginSubjects.AddUser, writer);
-            GameControl.Client.SendMessage(message, SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.AddUser, writer), SendMode.Reliable);
         }
 
         public static void Logout()
         {
             IsLoggedIn = false;
+            ChatManager.Messages = new List<ChatMessage>();
+
             GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.LogoutUser, new DarkRiftWriter()), SendMode.Reliable);
         }
         #endregion
@@ -64,43 +66,50 @@ namespace Login
         {
             var message = e.Message as TagSubjectMessage;
 
-            if (message != null && message.Tag == Tags.Login)
+            if (message == null || message.Tag != Tags.Login)
+                return;
+
+            // Successfully logged in
+            if (message.Subject == LoginSubjects.LoginSuccess)
             {
-                if (message.Subject == LoginSubjects.LoginSuccess)
-                {
-                    IsLoggedIn = true;
-                    onSuccessfulLogin?.Invoke();
-                }
-                if (message.Subject == LoginSubjects.LoginFailed)
-                {
-                    var reader = message.GetReader();
+                IsLoggedIn = true;
 
-                    if (reader.Length != 1)
-                    {
-                        Debug.LogWarning("Invalid LoginFailed Error data received.");
-                        return;
-                    }
 
-                    var errorData = reader.ReadByte();
-                    onFailedLogin?.Invoke(errorData);
-                }
-                if (message.Subject == LoginSubjects.AddUserSuccess)
+                onSuccessfulLogin?.Invoke();
+            }
+
+            // Failed to log in
+            else if (message.Subject == LoginSubjects.LoginFailed)
+            {
+                var reader = message.GetReader();
+
+                if (reader.Length != 1)
                 {
-                    onSuccessfulAddUser?.Invoke();
+                    Debug.LogWarning("Invalid LoginFailed Error data received.");
+                    return;
                 }
-                if (message.Subject == LoginSubjects.AddUserFailed)
+
+                onFailedLogin?.Invoke(reader.ReadByte());
+            }
+
+            // Successfully added a new user
+            else if (message.Subject == LoginSubjects.AddUserSuccess)
+            {
+                onSuccessfulAddUser?.Invoke();
+            }
+
+            // Failed to add a new user
+            else if (message.Subject == LoginSubjects.AddUserFailed)
+            {
+                var reader = message.GetReader();
+
+                if (reader.Length != 1)
                 {
-                    var reader = message.GetReader();
-
-                    if (reader.Length != 1)
-                    {
-                        Debug.LogWarning("Invalid LoginFailed Error data received.");
-                        return;
-                    }
-
-                    var errorData = reader.ReadByte();
-                    onFailedAddUser?.Invoke(errorData);
+                    Debug.LogWarning("Invalid LoginFailed Error data received.");
+                    return;
                 }
+
+                onFailedAddUser?.Invoke(reader.ReadByte());
             }
         }
     }

@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C46EA14E-D389-43F4-B781-954C91727DF7}</ProjectGuid>
+    <ProjectGuid>{301CD4DA-99EA-4AF3-909D-8B63F76D1DA3}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LoginPlugin</RootNamespace>
-    <AssemblyName>Login</AssemblyName>
+    <RootNamespace>ChatPlugin</RootNamespace>
+    <AssemblyName>Chat</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -30,23 +30,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BCrypt.Net, Version=0.1.5073.29922, Culture=neutral, PublicKeyToken=6bcd409ee6bc9292, processorArchitecture=MSIL">
-      <HintPath>..\packages\BCrypt-Official.0.1.109\lib\BCrypt.Net.dll</HintPath>
-    </Reference>
     <Reference Include="DarkRift">
-      <HintPath>..\..\..\Lib\DarkRift.dll</HintPath>
+      <HintPath>..\..\..\Darkrift 2 Server\Lib\DarkRift.dll</HintPath>
     </Reference>
     <Reference Include="DarkRift.Server">
-      <HintPath>..\..\..\Lib\DarkRift.Server.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Bson">
-      <HintPath>..\..\..\Lib\MongoDB.Bson.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver">
-      <HintPath>..\..\..\Lib\MongoDB.Driver.dll</HintPath>
-    </Reference>
-    <Reference Include="MongoDB.Driver.Core">
-      <HintPath>..\..\..\Lib\MongoDB.Driver.Core.dll</HintPath>
+      <HintPath>..\..\..\Darkrift 2 Server\Lib\DarkRift.Server.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -58,21 +46,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Encryption.cs" />
-    <Compile Include="Friends.cs" />
-    <Compile Include="Login.cs" />
+    <Compile Include="Chat.cs" />
+    <Compile Include="ChatGroup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="LICENSE.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DbConnector\DbConnector.csproj">
-      <Project>{b71dba54-d129-4744-b838-7c045b4a87c3}</Project>
-      <Name>DbConnector</Name>
+    <ProjectReference Include="..\Login\Login.csproj">
+      <Project>{c46ea14e-d389-43f4-b781-954c91727df7}</Project>
+      <Name>Login</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rooms\Rooms.csproj">
+      <Project>{b6ce1675-74fa-4ff1-b62a-0ba188999353}</Project>
+      <Name>Rooms</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

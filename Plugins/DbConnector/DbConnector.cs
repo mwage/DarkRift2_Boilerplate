@@ -50,7 +50,7 @@ namespace DbConnectorPlugin
                         LogType.Warning);
                     return "mongodb://localhost:27017";
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     WriteEvent("Failed to create DbConnector.xml: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
                     return null;
@@ -75,5 +75,18 @@ namespace DbConnectorPlugin
         {
             Users = _database.GetCollection<User>("users");
         }
+
+        #region ErrorHandling
+
+        public void DatabaseError(Client client, byte tag, ushort subject, Exception e)
+        {
+            WriteEvent("Database Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
+
+            var writer = new DarkRiftWriter();
+            writer.Write((byte)2);
+            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+        }
+
+        #endregion
     }
 }

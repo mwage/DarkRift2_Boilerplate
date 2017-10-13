@@ -1,16 +1,42 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
-public class ChannelListing : MonoBehaviour {
+namespace Chat
+{
+    public class ChannelListing : MonoBehaviour
+    {
+        [SerializeField] private Text _channelNameText;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public string Name { get; private set; }
+        public MessageType MessageType { get; private set; }
+        private ChannelLayoutGroup _channelLayoutGroup;
+
+        public void Initialize(MessageType messageType, string channelName, ChannelLayoutGroup layoutGroup)
+        {
+            Name = channelName;
+            MessageType = messageType;
+            _channelLayoutGroup = layoutGroup;
+
+            _channelNameText.text = channelName;
+            _channelNameText.color = ChatManager.ChatColors[messageType];
+        }
+
+        public void ChannelSelected()
+        {
+            ChatManager.ActivateChatInput(MessageType, Name);
+            _channelLayoutGroup.SetFilter(MessageType, Name);
+        }
+
+        public void Remove()
+        {
+            if (MessageType == MessageType.Private)
+            {
+                _channelLayoutGroup.RemoveChannel(MessageType, Name);
+            }
+            else if (MessageType == MessageType.ChatGroup)
+            {
+                ChatManager.LeaveChatGroup(Name);
+            }
+        }
+    }
 }

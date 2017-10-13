@@ -1,16 +1,28 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
-public class RoomNameInput : MonoBehaviour {
+namespace Rooms
+{
+    public class RoomNameInput : MonoBehaviour
+    {
+        public string CustomRoomName { get; private set; }
+        private InputField _inputField;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        private void Start()
+        {
+            _inputField = GetComponent<InputField>();
+
+            if (PlayerPrefs.HasKey("RoomName"))
+            {
+                CustomRoomName = PlayerPrefs.GetString("RoomName");
+                _inputField.text = CustomRoomName;
+            }
+        }
+
+        public void SetCustomRoomName(string value)
+        {
+            CustomRoomName = value;
+            PlayerPrefs.SetString("RoomName", value);
+        }
+    }
 }

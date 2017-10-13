@@ -1,16 +1,14 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿namespace Chat
+{
+    public class Filter
+    {
+        public MessageType MessageType { get; }
+        public string ChannelName { get; }
 
-public class Filter : MonoBehaviour {
-
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public Filter(MessageType messageType, string channelName)
+        {
+            MessageType = messageType;
+            ChannelName = channelName;
+        }
+    }
 }

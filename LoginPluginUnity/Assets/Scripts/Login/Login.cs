@@ -1,4 +1,5 @@
-﻿using Launcher;
+﻿using Chat;
+using Launcher;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -33,7 +34,6 @@ namespace Login
             LoginManager.onFailedAddUser += FailedAddUser;
         }
 
-        // If you don't unsubscribe, Unity won't clean up the class instance and you end up with Eventcalls pointing nowhere
         private void OnDestroy()
         {
             LoginManager.onSuccessfulLogin -= LoadMainMenu;
@@ -48,10 +48,10 @@ namespace Login
         {
             var condition = GameControl.Client.Connected
                             && UsernameInput.text.Length >= 2 && PasswordInput.text.Length >= 2
-                            && Rsa.Key.Exponent != null && Rsa.Key.Modulus != null;
+                            && Rsa.Key != null;
 
             LoginButton.interactable = condition;
-            AddUserButton.interactable = LoginButton.IsInteractable();
+            AddUserButton.interactable = condition;
 
             // Maybe add an option to try to reconnect
             if (!GameControl.Client.Connected)
@@ -94,6 +94,10 @@ namespace Login
                 PasswordInput.text = "";
                 LoginScreen("Username/Password Combination unknown", Color.red);
             }
+            else if (errorId == 3)
+            {
+                LoginScreen("Already logged in.", Color.red);
+            }
             else
             {
                 LoginScreen("Server couldn't process Information", Color.red);
@@ -105,10 +109,6 @@ namespace Login
             if (errorId == 1)
             {
                 LoginScreen("Username already taken.", Color.red);
-            }
-            else if (errorId == 3)
-            {
-                LoginScreen("Already logged in!", Color.red);
             }
             else
             {
@@ -148,6 +148,11 @@ namespace Login
 
         private static void LoadMainMenu()
         {
+            foreach (var group in ChatManager.SavedChatGroups)
+            {
+                ChatManager.JoinChatGroup(group);
+            }
+
             SceneManager.LoadScene("MainMenu");
         }
     }

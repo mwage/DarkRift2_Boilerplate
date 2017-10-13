@@ -1,16 +1,30 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
-public class ChatListing : MonoBehaviour {
+namespace Chat
+{
+    public class ChatListing : MonoBehaviour
+    {
+        private Text _messageText;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        /// <summary>
+        /// For Private, Room and Group Messages
+        /// </summary>
+        public void Initialize(MessageType messageType, string channel, string sender, string content)
+        {
+            _messageText = GetComponent<Text>();
+            _messageText.text = "[" + channel + "]  " + sender + ": " + content;
+            _messageText.color = ChatManager.ChatColors[messageType];
+        }
+
+        /// <summary>
+        /// For Server Messages
+        /// </summary>
+        public void Initialize(MessageType messageType, string content)
+        {
+            _messageText = GetComponent<Text>();
+            _messageText.text = content;
+            _messageText.color = ChatManager.ChatColors[messageType];
+        }
+    }
 }

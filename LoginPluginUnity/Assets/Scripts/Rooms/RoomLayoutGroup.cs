@@ -1,16 +1,41 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class RoomLayoutGroup : MonoBehaviour {
+namespace Rooms
+{
+    public class RoomLayoutGroup : MonoBehaviour
+    {
+        public GameObject RoomListingPrefab;
+        private List<RoomListing> _roomListings = new List<RoomListing>();
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        private void Awake()
+        {
+            RoomManager.onReceivedOpenRooms += OnReceivedOpenRooms;
+        }
+
+        private void OnDestroy()
+        {
+            RoomManager.onReceivedOpenRooms -= OnReceivedOpenRooms;
+        }
+
+        public void OnReceivedOpenRooms(List<Room> roomList)
+        {
+            foreach (var room in roomList)
+            {
+                var roomListing = Instantiate(RoomListingPrefab, transform, false).GetComponent<RoomListing>();
+                roomListing.Initialize(room);
+                _roomListings.Add(roomListing);
+            }
+        }
+
+        public void DeleteOldRooms()
+        {
+            foreach (var roomListing in _roomListings)
+            {
+                Destroy(roomListing.gameObject);
+            }
+            _roomListings = new List<RoomListing>();
+        }
+    }
 }
+

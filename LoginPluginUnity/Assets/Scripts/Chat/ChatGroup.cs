@@ -1,16 +1,22 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Linq;
+using DarkRift;
 
-public class ChatGroup : MonoBehaviour {
+namespace Chat
+{
+    public class ChatGroup : IDarkRiftSerializable
+    {
+        public string Name { get; private set; }
+        public List<string> Users;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public void Serialize(SerializeEvent e)
+        {
+        }
+
+        public void Deserialize(DeserializeEvent e)
+        {
+            Name = e.Reader.ReadString();
+            Users = e.Reader.ReadStrings().ToList();
+        }
+    }
 }

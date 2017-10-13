@@ -1,16 +1,40 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
-public class RoomListing : MonoBehaviour {
+namespace Rooms
+{
+    public class RoomListing : MonoBehaviour
+    {
+        public Text RoomNameText;
+        public Text GameModeText;
+        public Text PlayerCountText;
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public Room Room { get; private set; }
+
+        private Button _button;
+
+        private void Awake()
+        {
+            _button = GetComponent<Button>();
+        }
+
+        public void Initialize(Room room)
+        {
+            Room = room;
+            _button.onClick.AddListener(() => RoomManager.JoinRoom(Room.Id, PlayerColor.Green));
+            RoomNameText.text = Room.Name;
+            GameModeText.text = Room.GameType.ToString().GetFriendlyName();
+            PlayerCountText.text = Room.CurrentPlayers + "/" + Room.MaxPlayers;
+        }
+
+        private void OnDestroy()
+        {
+            _button.onClick.RemoveAllListeners();
+        }
+
+        private void Update()
+        {
+            _button.interactable = RoomManager.CurrentRoom == null;
+        }
+    }
 }

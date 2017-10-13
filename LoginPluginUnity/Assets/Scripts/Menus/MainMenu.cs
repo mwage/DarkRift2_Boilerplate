@@ -1,35 +1,74 @@
-﻿using DarkRift;
-using DarkRift.Client;
-using DarkRiftTags;
-using Launcher;
-using Login;
+﻿using Login;
+using Rooms;
+using UI.Main_Menu;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
-public class MainMenu : MonoBehaviour
+namespace Menus
 {
-    private void Awake()
+    public class MainMenu : MonoBehaviour
     {
-        GameControl.Client.MessageReceived += OnDataHandler;
-    }
+        public Text MultiplayerButtonText;
+        public Button MultiplayerButton;
+        public Text LogoutButtonText;
 
-    private void OnDestroy()
-    {
-        GameControl.Client.MessageReceived -= OnDataHandler;
-    }
+        private MainMenuManager _mainMenuManager;
+        private OptionsMenu _optionsMenu;
+        private SoloMenu _soloMenu;
+        private MultiplayerMenu _multiplayerMenu;
 
-    private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
-    {
-        var message = e.Message as TagSubjectMessage;
-
-        if (message != null && message.Tag == Tags.Login && message.Subject == LoginSubjects.LogoutSuccess)
+        private void Awake()
         {
-            SceneManager.LoadScene("Login");
+            _mainMenuManager = transform.parent.GetComponent<MainMenuManager>();
+            _optionsMenu = _mainMenuManager.OptionsMenu;
+            _soloMenu = _mainMenuManager.SoloMenu;
+            _multiplayerMenu = _mainMenuManager.MultiplayerMenu;
         }
-    }
 
-    public void Logout()
-    {
-        LoginManager.Logout();
+        private void Update()
+        {
+            MultiplayerButtonText.text = RoomManager.CurrentRoom == null ? "Multiplayer" : "Back to Lobby";
+            MultiplayerButton.interactable = LoginManager.IsLoggedIn;
+            LogoutButtonText.text = LoginManager.IsLoggedIn ? "Logout" : "Login";
+        }
+
+        #region Buttons
+
+        public void Multiplayer()
+        {
+            if (LoginManager.IsLoggedIn)
+            {
+                gameObject.SetActive(false);
+                _multiplayerMenu.gameObject.SetActive(true);
+            }
+            else
+            {
+                SceneManager.LoadScene("Login");
+            }
+        }
+
+        public void Solo()
+        {
+            gameObject.SetActive(false);
+            _soloMenu.gameObject.SetActive(true);
+        }
+
+        public void Options()
+        {
+            gameObject.SetActive(false);
+            _optionsMenu.gameObject.SetActive(true);
+        }
+
+        public void Logout()
+        {
+            LoginManager.Logout();
+        }
+
+        public void Quit()
+        {
+            Application.Quit();
+        }
+        #endregion
     }
 }

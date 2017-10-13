@@ -1,16 +1,17 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
-public class PlayerListing : MonoBehaviour {
+namespace Rooms
+{
+    public class PlayerListing : MonoBehaviour
+    {
+        [SerializeField] private Text _playerName;
+        public Player Player { get; private set; }
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public void Initialize(Player player)
+        {
+            Player = player;
+            _playerName.text = player.IsHost ? player.Name + " (Host)" : player.Name;
+        }
+    }
 }

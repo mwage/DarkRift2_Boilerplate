@@ -1,16 +1,26 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using DarkRift;
 
-public class Room : MonoBehaviour {
+namespace Rooms
+{
+    public class Room : IDarkRiftSerializable
+    {
+        public ushort Id { get; set; }
+        public string Name { get; private set; }
+        public GameType GameType { get; private set; }
+        public byte MaxPlayers { get; private set; }
+        public byte CurrentPlayers { get; private set; }
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+        public void Deserialize(DeserializeEvent e)
+        {
+            Id = e.Reader.ReadUInt16();
+            Name = e.Reader.ReadString();
+            GameType = (GameType)e.Reader.ReadByte();
+            MaxPlayers = e.Reader.ReadByte();
+            CurrentPlayers = e.Reader.ReadByte();
+        }
+
+        public void Serialize(SerializeEvent e)
+        {
+        }
+    }
 }
