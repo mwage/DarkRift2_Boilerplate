@@ -276,12 +276,10 @@ namespace Friends
                 var offlineFriends = reader.ReadStrings();
                 var openRequests = reader.ReadStrings();
                 var unansweredRequests = reader.ReadStrings();
-
                 foreach (var friend in onlineFriends)
                 {
                     ChatManager.ServerMessage(friend + " is online.", MessageType.Info);
                 }
-
                 onSuccessfulGetAllFriends?.Invoke(onlineFriends, offlineFriends, openRequests, unansweredRequests);
             }
             // Get all friends failed

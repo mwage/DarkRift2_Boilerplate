@@ -8,23 +8,23 @@ namespace Menus
 {
     public class MainMenu : MonoBehaviour
     {
-        public Text MultiplayerButtonText;
-        public Button MultiplayerButton;
+        public Text RoomButtonText;
+        public Button RoomButton;
         public Text LogoutButtonText;
 
-        private MainMenuManager _mainMenuManager;
+        private MenuManager _mainMenuManager;
         private RoomMenu _roomMenu;
 
         private void Awake()
         {
-            _mainMenuManager = transform.parent.GetComponent<MainMenuManager>();
+            _mainMenuManager = transform.parent.GetComponent<MenuManager>();
             _roomMenu = _mainMenuManager.RoomMenu;
         }
 
         private void Update()
         {
-            MultiplayerButtonText.text = RoomManager.CurrentRoom == null ? "Multiplayer" : "Back to Lobby";
-            MultiplayerButton.interactable = LoginManager.IsLoggedIn;
+            RoomButtonText.text = RoomManager.CurrentRoom == null ? "Rooms" : "Back to Lobby";
+            RoomButton.interactable = LoginManager.IsLoggedIn;
             LogoutButtonText.text = LoginManager.IsLoggedIn ? "Logout" : "Login";
         }
 

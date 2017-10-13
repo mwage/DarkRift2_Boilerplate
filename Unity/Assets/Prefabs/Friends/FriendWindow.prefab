@@ -303,6 +303,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36aedd9fc17595d4db5d97dd85ab4473, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _onlineFriendPrefab: {fileID: 0}
+  _offlineFriendPrefab: {fileID: 0}
+  _friendRequestPrefab: {fileID: 0}
+  _addFriendInput: {fileID: 0}
 --- !u!114 &114121289029570542
 MonoBehaviour:
   m_ObjectHideFlags: 1

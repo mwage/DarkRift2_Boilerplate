@@ -42,12 +42,13 @@ namespace Chat
         private void Start()
         {
             // Set ChatColors
+//            ChatColors[MessageType.ChatGroup] = new Color(0, 0.7f, 0);
             ChatColors[MessageType.ChatGroup] = Color.green;
             ChatColors[MessageType.Error] = Color.red;
-            ChatColors[MessageType.Info] = Color.cyan;
-            ChatColors[MessageType.Room] = new Color(1, 0.5f, 0);
+            ChatColors[MessageType.Info] = Color.blue;
+            ChatColors[MessageType.Room] = new Color(1, 0.4f, 0);
             ChatColors[MessageType.Private] = Color.magenta;
-            ChatColors[MessageType.All] = Color.white;
+            ChatColors[MessageType.All] = Color.black;
 
             // Get all saved Chatgroups
             if (PlayerPrefs.GetInt("SetChatGroups") == 0)

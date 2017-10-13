@@ -11,17 +11,17 @@ namespace Menus
         [SerializeField] private PlayerLayoutGroup _playerLayoutGroup;
         [SerializeField] private RoomNameInput _roomNameInput;
 
-        public GameObject OutOfLobby;
-        public GameObject CreatingLobby;
-        public GameObject InLobby;
+        public GameObject OutOfRoom;
+        public GameObject CreatingRoom;
+        public GameObject InRoom;
         public Button StartButton;
 
-        private MainMenuManager _mainMenuManager;
+        private MenuManager _mainMenuManager;
         private MainMenu _mainMenu;
 
         private void Awake()
         {
-            _mainMenuManager = transform.parent.GetComponent<MainMenuManager>();
+            _mainMenuManager = transform.parent.GetComponent<MenuManager>();
             _mainMenu = _mainMenuManager.MainMenu;
 
             RoomManager.onSuccessfulLeaveRoom += OnLeaveRoom;
@@ -38,9 +38,9 @@ namespace Menus
         {
             if (RoomManager.CurrentRoom == null)
             {
-                OutOfLobby.SetActive(true);
-                CreatingLobby.SetActive(false);
-                InLobby.SetActive(false);
+                OutOfRoom.SetActive(true);
+                CreatingRoom.SetActive(false);
+                InRoom.SetActive(false);
                 Refresh();
             }
         }
@@ -58,13 +58,13 @@ namespace Menus
             RoomManager.GetOpenRooms();
         }
 
-        public void OpenCreateRoom()
+        public void CreateRoom()
         {
-            OutOfLobby.SetActive(false);
-            CreatingLobby.SetActive(true);
+            OutOfRoom.SetActive(false);
+            CreatingRoom.SetActive(true);
         }
 
-        public void CreateRoom()
+        public void Create()
         {
             RoomManager.CreateRoom(_roomNameInput.CustomRoomName, true);
         }
@@ -76,19 +76,24 @@ namespace Menus
 
         public void BackToRoomlist()
         {
-            CreatingLobby.SetActive(false);
-            OutOfLobby.SetActive(true);
+            CreatingRoom.SetActive(false);
+            OutOfRoom.SetActive(true);
         }
 
         public void BackToMenu()
         {
             if (RoomManager.CurrentRoom == null)
             {
-                InLobby.SetActive(false);
-                CreatingLobby.SetActive(false);
+                InRoom.SetActive(false);
+                CreatingRoom.SetActive(false);
             }
             gameObject.SetActive(false);
             _mainMenu.gameObject.SetActive(true);
+        }
+
+        public void StartGame()
+        {
+            Debug.Log("implement start logic");
         }
 
         #endregion
@@ -97,17 +102,17 @@ namespace Menus
 
         public void OnJoinedRoom(List<Player> playerList)
         {
-            CreatingLobby.SetActive(false);
-            OutOfLobby.SetActive(false);
-            InLobby.SetActive(true);
+            CreatingRoom.SetActive(false);
+            OutOfRoom.SetActive(false);
+            InRoom.SetActive(true);
             _playerLayoutGroup.JoinedRoom(playerList);
         }
 
         public void OnLeaveRoom()
         {
             Refresh();
-            OutOfLobby.SetActive(true);
-            InLobby.SetActive(false);
+            OutOfRoom.SetActive(true);
+            InRoom.SetActive(false);
             _playerLayoutGroup.RemovePlayers();
         }
         #endregion

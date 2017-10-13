@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 
 namespace Menus
 {
-    public class MainMenuManager : MonoBehaviour
+    public class MenuManager : MonoBehaviour
     {
         public MainMenu MainMenu;
         public RoomMenu RoomMenu;

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,6 +18,7 @@ namespace Chat
 
         public void Initialize()
         {
+
             _channelLayoutGroup.FilterAll();
             AddOldMessages();
 
@@ -135,8 +137,6 @@ namespace Chat
 
         private void NewServerMessage(ChatMessage message)
         {
-
-
             var chatListing = Instantiate(_messagePrefab, Vector3.zero, Quaternion.identity, transform)
                 .GetComponent<ChatListing>();
             chatListing.Initialize(message.MessageType, message.Content);
