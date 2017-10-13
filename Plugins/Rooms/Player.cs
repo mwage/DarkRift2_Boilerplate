@@ -7,19 +7,12 @@ namespace RoomSystemPlugin
         public uint Id { get; }
         public string Name { get; }
         public bool IsHost { get; private set; }
-        public PlayerColor Color { get; private set; }
 
-        public Player(uint id, string name, bool isHost, PlayerColor color)
+        public Player(uint id, string name, bool isHost)
         {
             Id = id;
             Name = name;
             IsHost = isHost;
-            Color = color;
-        }
-
-        public void SetNewColor(PlayerColor color)
-        {
-            Color = color;
         }
 
         public void SetHost(bool isHost)
@@ -32,7 +25,6 @@ namespace RoomSystemPlugin
             e.Writer.Write(Id);
             e.Writer.Write(Name);
             e.Writer.Write(IsHost);
-            e.Writer.Write((byte)Color);
         }
 
         public void Deserialize(DeserializeEvent e)

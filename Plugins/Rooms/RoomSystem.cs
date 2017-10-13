@@ -34,9 +34,6 @@ namespace RoomSystemPlugin
         private const ushort PlayerJoined = 9;
         private const ushort LeaveSuccess = 10;
         private const ushort PlayerLeft = 11;
-        private const ushort ChangeColor = 12;
-        private const ushort ChangeColorSuccess = 13;
-        private const ushort ChangeColorFailed = 14;
 
         private const string ConfigPath = @"Plugins\RoomSystem.xml";
         private Login _loginPlugin;
@@ -116,17 +113,13 @@ namespace RoomSystemPlugin
                     return;
 
                 string roomName;
-                GameType gameMode;
-                PlayerColor color;
                 bool isVisible;
 
                 try
                 {
                     var reader = message.GetReader();
                     roomName = reader.ReadString();
-                    gameMode = (GameType)reader.ReadByte();
                     isVisible = reader.ReadBoolean();
-                    color = (PlayerColor)reader.ReadByte();
                 }
                 catch (Exception ex)
                 {
@@ -138,8 +131,8 @@ namespace RoomSystemPlugin
                 roomName = AdjustRoomName(roomName, _loginPlugin.UsersLoggedIn[client]);
                 var roomId = GenerateRoomId();
 
-                var room = new Room(roomId, roomName, gameMode, isVisible);
-                var player = new Player(client.GlobalID, _loginPlugin.UsersLoggedIn[client], true, color);
+                var room = new Room(roomId, roomName, isVisible);
+                var player = new Player(client.GlobalID, _loginPlugin.UsersLoggedIn[client], true);
                 room.AddPlayer(player, client);
                 RoomList.Add(roomId, room);
                 _playersInRooms.Add(client.GlobalID, room);
@@ -163,13 +156,11 @@ namespace RoomSystemPlugin
                     return;
 
                 ushort roomId;
-                PlayerColor color;
 
                 try
                 {
                     var reader = message.GetReader();
                     roomId = reader.ReadUInt16();
-                    color = (PlayerColor)reader.ReadByte();
                 }
                 catch (Exception ex)
                 {
@@ -193,7 +184,7 @@ namespace RoomSystemPlugin
                     return;
                 }
                 var room = RoomList[roomId];
-                var newPlayer = new Player(client.GlobalID, _loginPlugin.UsersLoggedIn[client], false, color);
+                var newPlayer = new Player(client.GlobalID, _loginPlugin.UsersLoggedIn[client], false);
 
                 // Check if player already is in an active room -> Send error 2
                 if (_playersInRooms.ContainsKey(client.GlobalID))
@@ -212,17 +203,6 @@ namespace RoomSystemPlugin
 
                 if (room.AddPlayer(newPlayer, client))
                 {
-                    // Generate new color if requested one is taken
-                    if (room.PlayerList.Exists(p => p.Color == color))
-                    {
-                        byte i = 0;
-                        while (room.PlayerList.Exists(p => p.Color == (PlayerColor)i))
-                        {
-                            i++;
-                        }
-                        newPlayer.SetNewColor((PlayerColor)i);
-                    }
-
                     _playersInRooms[client.GlobalID] = room;
 
                     var writer = new DarkRiftWriter();
@@ -268,59 +248,6 @@ namespace RoomSystemPlugin
             else if (message.Subject == Leave)
             {
                 LeaveRoom(client);
-            }
-
-            // Change Color Request
-            else if (message.Subject == ChangeColor)
-            {
-                ushort roomId;
-                PlayerColor color;
-
-                try
-                {
-                    var reader = message.GetReader();
-                    roomId = reader.ReadUInt16();
-                    color = (PlayerColor)reader.ReadByte();
-                }
-                catch (Exception ex)
-                {
-                    // Return Error 0 for Invalid Data Packages Recieved
-                    _loginPlugin.InvalidData(client, RoomTag, ChangeColorFailed, ex, "Change Color Failed! ");
-                    return;
-                }
-
-                var room = RoomList[roomId];
-                if (room.PlayerList.Any(p => p.Color == color))
-                {
-                    // Color already taken -> Send error 1
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)1);
-                    client.SendMessage(new TagSubjectMessage(RoomTag, ChangeColorFailed, writer), SendMode.Reliable);
-
-                    if (_debug)
-                    {
-                        WriteEvent("User " + client.GlobalID + " couldn't change color because it was already taken.", LogType.Info);
-                    }
-                }
-                else
-                {
-                    room.PlayerList.Find(p => p.Id == client.GlobalID).SetNewColor(color);
-
-                    // Let every other clients know
-                    var writer = new DarkRiftWriter();
-                    writer.Write(client.GlobalID);
-                    writer.Write((byte)color);
-
-                    foreach (var cl in room.Clients)
-                    {
-                        cl.SendMessage(new TagSubjectMessage(RoomTag, ChangeColorSuccess, writer), SendMode.Reliable);
-                    }
-
-                    if (_debug)
-                    {
-                        WriteEvent("User " + client.GlobalID + " successfully changed his color!", LogType.Info);
-                    }
-                }
             }
 
             // Get Open Rooms Request
@@ -430,18 +357,5 @@ namespace RoomSystemPlugin
                 WriteEvent(room.Name + " [" + room.Id + "] - " + room.PlayerList.Count + "/" + room.MaxPlayers, LogType.Info);
             }
         }
-    }
-
-    public enum GameType : byte
-    {
-        Arena,
-        Runling
-    }
-
-    public enum PlayerColor : byte
-    {
-        Green,
-        Red,
-        Blue
     }
 }

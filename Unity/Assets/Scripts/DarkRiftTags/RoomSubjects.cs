@@ -14,8 +14,5 @@
         public const ushort PlayerJoined = 9;
         public const ushort LeaveSuccess = 10;
         public const ushort PlayerLeft = 11;
-        public const ushort ChangeColor = 12;
-        public const ushort ChangeColorSuccess = 13;
-        public const ushort ChangeColorFailed = 14;
     }
 }
