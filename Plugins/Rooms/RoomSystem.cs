@@ -34,6 +34,9 @@ namespace RoomSystemPlugin
         private const ushort PlayerJoined = 9;
         private const ushort LeaveSuccess = 10;
         private const ushort PlayerLeft = 11;
+        private const ushort StartGame = 12;
+        private const ushort StartGameSuccess = 13;
+        private const ushort StartGameFailed = 14;
 
         private const string ConfigPath = @"Plugins\RoomSystem.xml";
         private Login _loginPlugin;
@@ -266,6 +269,48 @@ namespace RoomSystemPlugin
                 }
                 client.SendMessage(new TagSubjectMessage(RoomTag, GetOpenRooms, writer), SendMode.Reliable);
             }
+
+            // Start Game Request
+            else if (message.Subject == StartGame)
+            {
+                // If player isn't logged in -> return error 1
+                if (!_loginPlugin.PlayerLoggedIn(client, RoomTag, GetOpenRoomsFailed, "Start Game request failed."))
+                    return;
+
+                ushort roomId;
+
+                try
+                {
+                    var reader = message.GetReader();
+                    roomId = reader.ReadUInt16();
+                }
+                catch (Exception ex)
+                {
+                    // Return Error 0 for Invalid Data Packages Recieved
+                    _loginPlugin.InvalidData(client, RoomTag, StartGameFailed, ex, "Room Join Failed! ");
+                    return;
+                }
+
+                var username = _loginPlugin.UsersLoggedIn[client];
+                var player = RoomList[roomId].PlayerList.FirstOrDefault(p => p.Name == username);
+                if (player == null || !player.IsHost)
+                {
+                    // Player isn't host of this room -> return error 2
+                    var wr = new DarkRiftWriter();
+                    wr.Write((byte)2);
+
+                    client.SendMessage(new TagSubjectMessage(RoomTag, StartGameFailed, wr), SendMode.Reliable);
+
+                    if (_debug)
+                    {
+                        WriteEvent("User " + client.GlobalID + " couldn't start the game, since he wasn't a host!", LogType.Warning);
+                    }
+                    return;
+                }
+
+                // Start Game - Insert whatever data you need to send to initialize game (f.e. game server connection info)
+                client.SendMessage(new TagSubjectMessage(RoomTag, StartGameSuccess, new DarkRiftWriter()), SendMode.Reliable);
+            }
         }
 
         private ushort GenerateRoomId()
@@ -286,7 +331,7 @@ namespace RoomSystemPlugin
         {
             if (roomName == "")
             {
-                return playerName + "'s Lobby";
+                return playerName + "'s Room";
             }
 
             return roomName;

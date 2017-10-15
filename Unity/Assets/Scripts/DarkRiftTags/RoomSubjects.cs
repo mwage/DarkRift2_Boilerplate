@@ -14,5 +14,8 @@
         public const ushort PlayerJoined = 9;
         public const ushort LeaveSuccess = 10;
         public const ushort PlayerLeft = 11;
+        public const ushort StartGame = 12;
+        public const ushort StartGameSuccess = 13;
+        public const ushort StartGameFailed = 14;
     }
 }

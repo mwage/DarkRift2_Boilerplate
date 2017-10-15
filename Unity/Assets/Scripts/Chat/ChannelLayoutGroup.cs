@@ -37,7 +37,7 @@ namespace Chat
 
         public void AddPrivateChannel(string channelName)
         {
-            if (ActiveChannels.Exists(c => c.Name == channelName))
+            if (ActiveChannels.Exists(c => c.Name == channelName && c.MessageType == MessageType.Private))
                 return;
 
             AddChannel(MessageType.Private, channelName);

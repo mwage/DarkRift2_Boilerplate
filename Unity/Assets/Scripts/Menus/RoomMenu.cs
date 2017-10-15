@@ -93,7 +93,7 @@ namespace Menus
 
         public void StartGame()
         {
-            Debug.Log("implement start logic");
+            RoomManager.StartGame();
         }
 
         #endregion

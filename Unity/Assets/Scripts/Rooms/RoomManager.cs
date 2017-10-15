@@ -48,8 +48,7 @@ namespace Rooms
             writer.Write(roomname);
             writer.Write(isVisible);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Create, writer),
-                SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Create, writer), SendMode.Reliable);
         }
 
         public static void JoinRoom(ushort roomId)
@@ -57,22 +56,24 @@ namespace Rooms
             var writer = new DarkRiftWriter();
             writer.Write(roomId);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Join, writer),
-                SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Join, writer), SendMode.Reliable);
         }
 
         public static void LeaveRoom()
         {
-            GameControl.Client.SendMessage(
-                new TagSubjectMessage(Tags.Room, RoomSubjects.Leave, new DarkRiftWriter()),
-                SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Leave, new DarkRiftWriter()), SendMode.Reliable);
         }
 
         public static void GetOpenRooms()
         {
-            GameControl.Client.SendMessage(
-                new TagSubjectMessage(Tags.Room, RoomSubjects.GetOpenRooms, new DarkRiftWriter()),
-                SendMode.Reliable);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.GetOpenRooms, new DarkRiftWriter()), SendMode.Reliable);
+        }
+
+        public static void StartGame()
+        {
+            var writer = new DarkRiftWriter();
+            writer.Write(CurrentRoom.Id);
+            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.StartGame, writer), SendMode.Reliable);
         }
         #endregion
 
@@ -205,6 +206,11 @@ namespace Rooms
                 var leaverName = reader.ReadString();
                 ChatManager.ServerMessage(leaverName + " left the room.", MessageType.Room);
 
+                if (newHostId == GameControl.Client.ID)
+                {
+                    IsHost = true;
+                }
+
                 onPlayerLeft?.Invoke(leftId, newHostId);
             }
 
@@ -228,7 +234,42 @@ namespace Rooms
                 SceneManager.LoadScene("Login");
             }
 
-            // TODO: color
+            // Successfully started Game
+            else if (message.Subject == RoomSubjects.StartGameSuccess)
+            {
+                SceneManager.LoadScene("Game");
+            }
+
+            // Failed to start Game
+            else if (message.Subject == RoomSubjects.StartGameFailed)
+            {
+                var content = "Failed to start game.";
+                var reader = message.GetReader();
+                if (reader.Length != 1)
+                {
+                    Debug.LogWarning("Invalid StartGame Error data received.");
+                    return;
+                }
+
+                switch (reader.ReadByte())
+                {
+                    case 0:
+                        Debug.Log("Invalid CreateRoom data sent!");
+                        break;
+                    case 1:
+                        Debug.Log("Player not logged in!");
+                        SceneManager.LoadScene("Login");
+                        break;
+                    case 2:
+                        Debug.Log("You are not the host!");
+                        content = "Only the host can start a game!";
+                        break;
+                    default:
+                        Debug.Log("Invalid errorId!");
+                        break;
+                }
+                ChatManager.ServerMessage(content, MessageType.Error);
+            }
         }
     }
 }
