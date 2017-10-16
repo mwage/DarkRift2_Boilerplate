@@ -7,17 +7,16 @@ I'm using MongoDB for this project, but adapting things to SQL shouldn't be all 
 ### Instructions:
 
 1) Clone/Download the project.
-2) Open LoginPluginUnity with Unity.
+2) Open the Unity folder with Unity.
 3) Import the Darkrift 2 package.
-4) Open the Launcher Scene and make sure the UnityClient Script is attached to the GameManager Object.
-5) Extract the "DarkRift Server.zip" that got added to the Assets/DarkRift folder to a location outside the Unity project.
-6) Inside the "DarkRift Server" folder, create a new folder called "Plugins".
-7) Open and run the Plugins/GenerateRsaKeys solution. This creates PrivateKey.xml and PublicKey.xml.
-8) Copy PrivateKey.xml into DarkRift Server/Plugins and PublicKey.xml into the Assets/Resources folder in the Unity project (might have to create the folder).
-9) Open the Plugins/Plugins.sln solution.
-8) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib to all 4 projects.
-9) Install the MongoDB driver package with the NuGet package manager into Login and DBConnector projects.
-10) You might have to install the BCrypt-Official Nuget package for the Login Project.
+4) Extract the "DarkRift Server.zip" that got added to the Assets/DarkRift folder to a location outside the Unity project.
+5) Inside the "DarkRift Server" folder, create a new folder called "Plugins".
+6) Open and run the Plugins/GenerateRsaKeys solution. This creates PrivateKey.xml and PublicKey.xml.
+7) Copy PrivateKey.xml into DarkRift Server/Plugins and PublicKey.xml into the Assets/Resources folder in the Unity project (might have to create the folder).
+8) Open the Plugins/Plugins.sln solution.
+9) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib to all 4 projects.
+10) Install the MongoDB driver package with the NuGet package manager into Login and DBConnector projects.
+11) You might have to install the BCrypt-Official Nuget package for the Login Project.
 12) Build the solution.
 13) Copy DbConnector.dll, Login.dll, Chat.dll and Rooms.dll into DarkRiftServer/Plugins and the 3 Mongo, the System.Runtime and the BCrypt dll into DarkRiftServer/lib. You can find all of them in the Debug/bin folder of the Chat project.
 
