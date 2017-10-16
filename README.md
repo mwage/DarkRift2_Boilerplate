@@ -1,4 +1,4 @@
-# DarkRift2_Bolierplate
+# DarkRift2_Boilerplate
 
 Boilerplate for new Darkrift projects. Free to use, copy and change to suit your needs.
 
