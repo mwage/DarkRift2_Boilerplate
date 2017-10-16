@@ -2,7 +2,7 @@
 
 Boilerplate for new Darkrift projects. Free to use, copy and change to suit your needs.
 
-I'm using MongoDB for this project, but adapting things to SQL shouldn't be all that difficult. For Authentication I'm using RSA and BCrypt, but for actual live projects outside of testing, you might want to use f.e. OAuth2 to not have to deal with storing user data yourself. I take no responsibility for any security issues. Type /join (name) or /leave (name) to join/leave a chatgroup and tab/enter/esc to navigate in chat window.
+I'm using MongoDB for this project, but adapting things to SQL shouldn't be all that difficult. For Authentication I'm using RSA and BCrypt, but for actual live projects outside of testing, you might want to use f.e. OAuth2 to not have to deal with storing user data yourself. I take no responsibility for any security issues. Type /join (name) or /leave (name) to join/leave a chatgroup and use tab/enter/esc to navigate in the chat window.
 
 ### Instructions:
 
