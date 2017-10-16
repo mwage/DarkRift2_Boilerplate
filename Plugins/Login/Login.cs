@@ -7,7 +7,6 @@ using DarkRift;
 using DarkRift.Server;
 using DbConnectorPlugin;
 using MongoDB.Driver;
-using System.Security.Cryptography;
 
 namespace LoginPlugin
 {
@@ -21,36 +20,42 @@ namespace LoginPlugin
             new Command("AddUser", "Adds a User to the Database [AddUser name password]", "", AddUserCommand),
             new Command("DelUser", "Deletes a User from the Database [DelUser name]", "", DelUserCommand),
             new Command("LPDebug", "Enables Plugin Debug", "", DebugCommand),
-            new Command("Online", "Logs number of online users", "", UsersLoggedInCommand),
-            new Command("LoggedIn", "Logs number of online users", "", UsersOnlineCommand)
+            new Command("LoggedIn", "Logs number of online users", "", UsersLoggedInCommand),
+            new Command("Online", "Logs number of online users", "", UsersOnlineCommand)
         };
 
         // Tag
         private const byte LoginTag = 0;
 
         // Subjects
-        private const ushort Keys = 0;
-        private const ushort LoginUser = 1;
-        private const ushort LogoutUser = 2;
-        private const ushort AddUser = 3;
-        private const ushort LoginSuccess = 4;
-        private const ushort LoginFailed = 5;
-        private const ushort LogoutSuccess = 6;
-        private const ushort AddUserSuccess = 7;
-        private const ushort AddUserFailed = 8;
+        private const ushort LoginUser = 0;
+        private const ushort LogoutUser = 1;
+        private const ushort AddUser = 2;
+        private const ushort LoginSuccess = 3;
+        private const ushort LoginFailed = 4;
+        private const ushort LogoutSuccess = 5;
+        private const ushort AddUserSuccess = 6;
+        private const ushort AddUserFailed = 7;
 
-        // Connects the clients Global ID with his username
-        public Dictionary<uint, string> UsersLoggedIn = new Dictionary<uint, string>();
-        private readonly Dictionary<uint, RSAParameters> _keys = new Dictionary<uint, RSAParameters>();
+        // Connects the Client with his Username
+        public Dictionary<Client, string> UsersLoggedIn = new Dictionary<Client, string>();
+        public Dictionary<string, Client> Clients = new Dictionary<string, Client>();
 
         private const string ConfigPath = @"Plugins\Login.xml";
+        private const string PrivateKeyPath = @"Plugins\PrivateKey.xml";
         private DbConnector _dbConnector;
+        private string _privateKey;
         private bool _allowAddUser = true;
         private bool _debug = true;
+
+        public delegate void LogoutEventHandler(string username);
+
+        public event LogoutEventHandler onLogout;
 
         public Login(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
             LoadConfig();
+            LoadRsaKey();
             ClientManager.ClientConnected += OnPlayerConnected;
             ClientManager.ClientDisconnected += OnPlayerDisconnected;
         }
@@ -74,7 +79,6 @@ namespace LoginPlugin
                 {
                     WriteEvent("Failed to create Login.xml: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
                 }
-
             }
             else
             {
@@ -91,38 +95,42 @@ namespace LoginPlugin
             }
         }
 
+        private void LoadRsaKey()
+        {
+            try
+            {
+                _privateKey = File.ReadAllText(PrivateKeyPath);
+            }
+            catch (Exception ex)
+            {
+                WriteEvent("Failed to load PrivateKey.xml: " + ex.Message + " - " + ex.StackTrace, LogType.Fatal);
+            }
+        }
+
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // Empty name == online, but not logged in
-            UsersLoggedIn[e.Client.GlobalID] = "";
-
-            // Generate RSA keypair and send client his public key to encrypt the password
-            _keys[e.Client.GlobalID] = Encryption.GenerateKeys(out var publicKey);
-
-            var writer = new DarkRiftWriter();
-            writer.Write(publicKey.Exponent);
-            writer.Write(publicKey.Modulus);
-
-            e.Client.SendMessage(new TagSubjectMessage(LoginTag, Keys, writer), SendMode.Reliable);
-            e.Client.MessageReceived += OnMessageReceived;
-
             // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
             if (_dbConnector == null)
             {
                 _dbConnector = PluginManager.GetPluginByType<DbConnector>();
             }
+
+            UsersLoggedIn[e.Client] = null;
+
+            e.Client.MessageReceived += OnMessageReceived;
         }
 
         private void OnPlayerDisconnected(object sender, ClientDisconnectedEventArgs e)
         {
-            // log out the User and remove his private key on disconnect
-            if (UsersLoggedIn.ContainsKey(e.Client.GlobalID))
+            if (UsersLoggedIn.ContainsKey(e.Client))
             {
-                UsersLoggedIn.Remove(e.Client.GlobalID);
-            }
-            if (_keys.ContainsKey(e.Client.GlobalID))
-            {
-                _keys.Remove(e.Client.GlobalID);
+                var username = UsersLoggedIn[e.Client];
+                UsersLoggedIn.Remove(e.Client);
+                if (username != null)
+                {
+                    Clients.Remove(username);
+                    onLogout?.Invoke(username);
+                }
             }
         }
 
@@ -137,7 +145,7 @@ namespace LoginPlugin
             if (message.Subject == LoginUser)
             {
                 // If user is already logged in (shouldn't happen though)
-                if (UsersLoggedIn[client.GlobalID] != "")
+                if (UsersLoggedIn[client] != null)
                 {
                     client.SendMessage(new TagSubjectMessage(LoginTag, LoginSuccess, new DarkRiftWriter()), SendMode.Reliable);
                     return;
@@ -150,16 +158,12 @@ namespace LoginPlugin
                 {
                     var reader = message.GetReader();
                     username = reader.ReadString();
-                    password = Encryption.Decrypt(reader.ReadBytes(), _keys[client.GlobalID]);
+                    password = Encryption.Decrypt(reader.ReadBytes(), _privateKey);
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("Invalid Login data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
-
                     // Return Error 0 for Invalid Data Packages Recieved
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)0);
-                    client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
+                    InvalidData(client, LoginTag, LoginFailed, ex, "Failed to log in!");
                     return;
                 }
 
@@ -172,16 +176,14 @@ namespace LoginPlugin
                     return;
                 }
 
-
                 try
                 {
-                    // Search for User with the received username
                     var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
 
-                    // Check if password matches
                     if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                     {
-                        UsersLoggedIn[client.GlobalID] = username;
+                        UsersLoggedIn[client] = username;
+                        Clients[username] = client;
 
                         client.SendMessage(new TagSubjectMessage(LoginTag, LoginSuccess, new DarkRiftWriter()), SendMode.Reliable);
 
@@ -199,31 +201,34 @@ namespace LoginPlugin
 
                         // Return Error 1 for "Wrong username/password combination"
                         var writer = new DarkRiftWriter();
-                        writer.Write((byte) 1);
+                        writer.Write((byte)1);
                         client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("Database Error: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
-
                     // Return Error 2 for Database error
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)2);
-                    client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
+                    _dbConnector.DatabaseError(client, LoginTag, LoginFailed, ex);
                 }
             }
 
             // Logout Request
             if (message.Subject == LogoutUser)
             {
-                UsersLoggedIn[client.GlobalID] = "";
+                var username = UsersLoggedIn[client];
+                UsersLoggedIn[client] = null;
+                if (username != null)
+                {
+                    Clients.Remove(username);
+                }
 
                 if (_debug)
                 {
                     WriteEvent("User " + client.GlobalID + " logged out!", LogType.Info);
                 }
+
                 client.SendMessage(new TagSubjectMessage(LoginTag, LogoutSuccess, new DarkRiftWriter()), SendMode.Reliable);
+                onLogout?.Invoke(username);
             }
 
             // Registration Request
@@ -234,23 +239,20 @@ namespace LoginPlugin
 
                 string username;
                 string password;
-                
+
                 try
                 {
                     var reader = message.GetReader();
                     username = reader.ReadString();
+
                     password = BCrypt.Net.BCrypt.HashPassword(
-                        Encryption.Decrypt(reader.ReadBytes(), _keys[client.GlobalID])
+                        Encryption.Decrypt(reader.ReadBytes(), _privateKey)
                         , 10);
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("Invalid AddUser data received: " + ex.Message + " - " + ex.StackTrace, LogType.Warning);
-
-                    // Return Error 0 for Invalid Data Recieved
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)0);
-                    client.SendMessage(new TagSubjectMessage(LoginTag, AddUserFailed, writer), SendMode.Reliable);
+                    // Return Error 0 for Invalid Data Packages Recieved
+                    InvalidData(client, LoginTag, AddUserFailed, ex, "Failed to add user!");
                     return;
                 }
 
@@ -276,25 +278,19 @@ namespace LoginPlugin
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("Database Error: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
-
                     // Return Error 2 for Database error
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)2);
-                    client.SendMessage(new TagSubjectMessage(LoginTag, AddUserFailed, writer), SendMode.Reliable);
+                    _dbConnector.DatabaseError(client, LoginTag, AddUserFailed, ex);
                 }
             }
         }
 
         private bool UsernameAvailable(string username)
         {
-            // Returns true if username is available, false if taken
             return !_dbConnector.Users.AsQueryable().Any(u => u.Username == username);
         }
 
         private void AddNewUser(string username, string password)
         {
-            // Adds user to the database
             _dbConnector.Users.InsertOne(new User(username, password));
 
             if (_debug)
@@ -302,12 +298,12 @@ namespace LoginPlugin
                 WriteEvent("New User: " + username, LogType.Info);
             }
         }
-        
+
         #region Commands
 
         private void UsersLoggedInCommand(object sender, CommandEventArgs e)
         {
-            WriteEvent(UsersLoggedIn.Count + " Users logged in", LogType.Info);
+            WriteEvent(Clients.Count + " Users logged in", LogType.Info);
         }
 
         private void UsersOnlineCommand(object sender, CommandEventArgs e)
@@ -395,6 +391,32 @@ namespace LoginPlugin
                     break;
             }
         }
+        #endregion
+
+        #region ErrorHandling
+
+        public bool PlayerLoggedIn(Client client, byte tag, ushort subject, string error)
+        {
+            if (UsersLoggedIn[client] != null)
+                return true;
+
+            var writer = new DarkRiftWriter();
+            writer.Write((byte)1);
+            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+
+            WriteEvent(error + " Player wasn't logged in.", LogType.Warning);
+            return false;
+        }
+
+        public void InvalidData(Client client, byte tag, ushort subject, Exception e, string error)
+        {
+            var writer = new DarkRiftWriter();
+            writer.Write((byte)0);
+            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+
+            WriteEvent(error + " Invalid data received: " + e.Message + " - " + e.StackTrace, LogType.Warning);
+        }
+
         #endregion
     }
 }
