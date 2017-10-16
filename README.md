@@ -25,4 +25,4 @@ You should be able to run the server without errors now.
 Ignore the warning, it just reminds you that the connection path is set to default ("mongodb://localhost:27017").
 
 With that the setup should complete. Install MongoDB if you don't have it and run mongod.exe.
-Run the DarkRift.Server.Console.exe and run the Launcher in your Unity scene and you should be able to Register/Login/Logout.
+Run the DarkRift.Server.Console.exe and run the Launcher in your Unity scene.
