@@ -1,33 +1,8 @@
 # DarkRift2_Bolierplate
 
-Currently adding Friend-, Chat- and Roomsystem.
+Boilerplate for new Darkrift projects. Free to use, copy and change to suit your needs.
 
-
-
-
-
-
-
-
-
-Login Plugin + MongoDB Connector for DarkRift 2
-
-Free to use, copy and change to suit your needs.
-
-This LoginPlugin uses MongoDB. If you want to use SQL, you'll have to change the DbConnector to something similar the old 
-DR1 MySQL Connector and expose the Database as a variable to access from other plugins instead of the collections.
-
-For security it uses and RSA and BCrypt. When a user connects, the LoginPlugin creates a new public/private key pair, 
-stores the private key (for decryption) in a Dictionary and sends the public key (for encryption) to the user. 
-
-The user encrypts his password with the public key, sends it to the server, where the LoginPlugin can decrypt it with the private key 
-and either salt-hashes it with BCrypt before storing it in the database or just verifys it (BCrypt.Verify()).
-
-This should make it a lot more secure than the old DR1 one, but if you want to actually use it outside of basic testing, 
-you might want to revise the security and make sure everything is really as secure as the needed to meet your demands. For example you'll need to address the lack of identification in it's current state (I might include something on this later on).
-
-I take no responsibility for any complications/problems caused by use of this plugin.
-
+I'm using MongoDB for this project, but adapting things to SQL shouldn't be all that difficult. For Authentication I'm using RSA and BCrypt, but for actual live projects outside of testing, you might want to use f.e. OAuth2 to not have to deal with storing user data yourself. I take no responsibility for any security issues. Type /join (name) or /leave (name) to join/leave a chatgroup and tab/enter/esc to navigate in chat window.
 
 ### Instructions:
 
