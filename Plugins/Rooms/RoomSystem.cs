@@ -309,6 +309,8 @@ namespace RoomSystemPlugin
                 }
 
                 // Start Game - Insert whatever data you need to send to initialize game (f.e. game server connection info)
+                RoomList[roomId].HasStarted = true;
+
                 client.SendMessage(new TagSubjectMessage(RoomTag, StartGameSuccess, new DarkRiftWriter()), SendMode.Reliable);
             }
         }
@@ -329,7 +331,7 @@ namespace RoomSystemPlugin
 
         private static string AdjustRoomName(string roomName, string playerName)
         {
-            if (roomName == "")
+            if (string.IsNullOrWhiteSpace(roomName))
             {
                 return playerName + "'s Room";
             }
