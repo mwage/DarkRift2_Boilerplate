@@ -9,16 +9,16 @@ namespace Launcher
         {
         }
 
-        public static UnityClient Client;
+        private UnityClient _client;
 
-        //Keep Game Manager active and destroy any additional copys
+        public static UnityClient Client => Instance._client;
+
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
-            Client = GetComponent<UnityClient>();
+            _client = GetComponent<UnityClient>();
         }
 
-        //Start Game
         private void Start()
         {
             SceneManager.LoadScene("Login");
