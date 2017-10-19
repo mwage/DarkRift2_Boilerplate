@@ -177,7 +177,6 @@ namespace Friends
                 return;
             }
             
-            Debug.Log(_addFriendInput.text);
             FriendManager.SendFriendRequest(_addFriendInput.text);
             _addFriendInput.text = "";
         }

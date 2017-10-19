@@ -23,6 +23,9 @@ namespace Menus
 
         private void OnDestroy()
         {
+            if (GameControl.Client == null)
+                return;
+
             GameControl.Client.MessageReceived -= OnDataHandler;
         }
 

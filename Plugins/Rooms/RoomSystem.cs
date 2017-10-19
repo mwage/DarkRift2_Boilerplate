@@ -311,7 +311,10 @@ namespace RoomSystemPlugin
                 // Start Game - Insert whatever data you need to send to initialize game (f.e. game server connection info)
                 RoomList[roomId].HasStarted = true;
 
-                client.SendMessage(new TagSubjectMessage(RoomTag, StartGameSuccess, new DarkRiftWriter()), SendMode.Reliable);
+                foreach (var cl in RoomList[roomId].Clients)
+                {
+                    cl.SendMessage(new TagSubjectMessage(RoomTag, StartGameSuccess, new DarkRiftWriter()), SendMode.Reliable);
+                }
             }
         }
 
