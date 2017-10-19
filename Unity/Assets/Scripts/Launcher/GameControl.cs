@@ -11,7 +11,7 @@ namespace Launcher
 
         private UnityClient _client;
 
-        public static UnityClient Client => Instance._client;
+        public static UnityClient Client => Instance?._client;
 
         private void Awake()
         {

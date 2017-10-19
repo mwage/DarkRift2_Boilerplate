@@ -13,10 +13,10 @@ namespace Chat
 {
     public class ChatManager : MonoBehaviour
     {
-        public static List<ChatMessage> Messages = new List<ChatMessage>();
-        public static List<string> SavedChatGroups;
+        public static List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
+        public static List<string> SavedChatGroups { get; private set; }
 
-        public static Dictionary<MessageType, Color> ChatColors = new Dictionary<MessageType, Color>();
+        public static Dictionary<MessageType, Color> ChatColors { get; } = new Dictionary<MessageType, Color>();
 
         #region Events
 
@@ -61,12 +61,15 @@ namespace Chat
             {
                 SavedChatGroups = ArrayPrefs.GetStringArray("ChatGroups").ToList();
             }
-
+            
             GameControl.Client.MessageReceived += OnDataHandler;
         }
 
         private void OnDestroy()
         {
+            if (GameControl.Client == null)
+                return;
+            
             GameControl.Client.MessageReceived -= OnDataHandler;
         }
 
@@ -189,9 +192,6 @@ namespace Chat
                 case "/logout":
                     LoginManager.Logout();
                     break;
-                case "/wage":
-                    ServerMessage("I Made Dis!", MessageType.Info);
-                    break;
                 default:
                     ServerMessage("Unknown command.", MessageType.Error);
                     break;
@@ -237,6 +237,7 @@ namespace Chat
                 var content = reader.ReadString();
                 var chatMessage = new ChatMessage(senderName, content, MessageType.Room, "Room");
                 Messages.Add(chatMessage);
+
                 onRoomMessage?.Invoke(chatMessage);
             }
             // Group message received

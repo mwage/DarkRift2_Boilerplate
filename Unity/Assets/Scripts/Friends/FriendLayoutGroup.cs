@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Chat;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -87,7 +88,7 @@ namespace Friends
 
         private void UnansweredRequest(string friendName)
         {
-            _addFriendInput.text = "";
+
             AddListing(friendName, _offlineFriends, _offlineFriendPrefab);
             SortListings();
         }
@@ -170,7 +171,15 @@ namespace Friends
 
         public void AddFriend()
         {
+            if (string.IsNullOrWhiteSpace(_addFriendInput.text))
+            {
+                ChatManager.ServerMessage("Please enter a valid name.", MessageType.Error);
+                return;
+            }
+            
+            Debug.Log(_addFriendInput.text);
             FriendManager.SendFriendRequest(_addFriendInput.text);
+            _addFriendInput.text = "";
         }
 
         public void TogglePanel()
