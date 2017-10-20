@@ -204,6 +204,7 @@ namespace RoomSystemPlugin
                     return;
                 }
 
+                // Try to join room
                 if (room.AddPlayer(newPlayer, client))
                 {
                     _playersInRooms[client.GlobalID] = room;
@@ -244,7 +245,6 @@ namespace RoomSystemPlugin
                         WriteEvent("User " + client.GlobalID + " couldn't join, since Room " + room.Id + " was either full or had started!", LogType.Info);
                     }
                 }
-                // Try to join room
             }
 
             // Leave Room Request

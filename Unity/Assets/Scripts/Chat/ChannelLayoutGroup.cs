@@ -41,6 +41,7 @@ namespace Chat
                 return;
 
             AddChannel(MessageType.Private, channelName);
+            _chatLayoutGroup.PrivateMessages[channelName] = new List<ChatListing>();
         }
 
         public void AddGroupChannel(string channelName)
@@ -49,6 +50,7 @@ namespace Chat
                 return;
 
             AddChannel(MessageType.ChatGroup, channelName);
+            _chatLayoutGroup.GroupMessages[channelName] = new List<ChatListing>();
             _chatWindowManager.ActivateInputField(MessageType.ChatGroup, channelName);
         }
 

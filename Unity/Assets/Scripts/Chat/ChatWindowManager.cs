@@ -60,19 +60,6 @@ namespace Chat
                     {
                         SendMessage();
                     }
-                    else
-                    {
-                        if (!FriendPanels.activeSelf)
-                        {
-                            DeactivatePanels();
-                        }
-                        else
-                        {
-                            ChatPanels.SetActive(true);
-                            _placeHolderText.SetActive(false);
-                            _inputField.ActivateInputField();
-                        }
-                    }
                     _checkInput = false;
                 }
                 else
