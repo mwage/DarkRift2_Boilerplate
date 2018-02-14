@@ -38,8 +38,8 @@ namespace LoginPlugin
         private const ushort AddUserFailed = 7;
 
         // Connects the Client with his Username
-        public Dictionary<Client, string> UsersLoggedIn = new Dictionary<Client, string>();
-        public Dictionary<string, Client> Clients = new Dictionary<string, Client>();
+        public Dictionary<IClient, string> UsersLoggedIn = new Dictionary<IClient, string>();
+        public Dictionary<string, IClient> Clients = new Dictionary<string, IClient>();
 
         private const string ConfigPath = @"Plugins\Login.xml";
         private const string PrivateKeyPath = @"Plugins\PrivateKey.xml";
@@ -136,152 +136,190 @@ namespace LoginPlugin
 
         private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
-            if (!(e.Message is TagSubjectMessage message) || message.Tag != LoginTag)
-                return;
-
-            var client = (Client)sender;
-
-            // Login Request
-            if (message.Subject == LoginUser)
+            using (var message = e.GetMessage())
             {
-                // If user is already logged in (shouldn't happen though)
-                if (UsersLoggedIn[client] != null)
-                {
-                    client.SendMessage(new TagSubjectMessage(LoginTag, LoginSuccess, new DarkRiftWriter()), SendMode.Reliable);
-                    return;
-                }
+                var client = e.Client;
 
-                string username;
-                string password;
-
-                try
+                // Login Request
+                if (message.Tag == GetTag(LoginUser))
                 {
-                    var reader = message.GetReader();
-                    username = reader.ReadString();
-                    password = Encryption.Decrypt(reader.ReadBytes(), _privateKey);
-                }
-                catch (Exception ex)
-                {
-                    // Return Error 0 for Invalid Data Packages Recieved
-                    InvalidData(client, LoginTag, LoginFailed, ex, "Failed to log in!");
-                    return;
-                }
-
-                if (UsersLoggedIn.ContainsValue(username))
-                {
-                    // Username is already in use -> return Error 3
-                    var writer = new DarkRiftWriter();
-                    writer.Write((byte)3);
-                    client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
-                    return;
-                }
-
-                try
-                {
-                    var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
-
-                    if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+                    // If user is already logged in (shouldn't happen though)
+                    if (UsersLoggedIn[client] != null)
                     {
-                        UsersLoggedIn[client] = username;
-                        Clients[username] = client;
-
-                        client.SendMessage(new TagSubjectMessage(LoginTag, LoginSuccess, new DarkRiftWriter()), SendMode.Reliable);
-
-                        if (_debug)
+                        using (var msg = Message.CreateEmpty(GetTag(LoginSuccess)))
                         {
-                            WriteEvent("Successful login (" + client.GlobalID + ").", LogType.Info);
-                        }
-                    }
-                    else
-                    {
-                        if (_debug)
-                        {
-                            WriteEvent("User " + client.GlobalID + " couldn't log in!", LogType.Info);
+                            client.SendMessage(msg, SendMode.Reliable);
                         }
 
-                        // Return Error 1 for "Wrong username/password combination"
-                        var writer = new DarkRiftWriter();
-                        writer.Write((byte)1);
-                        client.SendMessage(new TagSubjectMessage(LoginTag, LoginFailed, writer), SendMode.Reliable);
+                        return;
                     }
-                }
-                catch (Exception ex)
-                {
-                    // Return Error 2 for Database error
-                    _dbConnector.DatabaseError(client, LoginTag, LoginFailed, ex);
-                }
-            }
 
-            // Logout Request
-            if (message.Subject == LogoutUser)
-            {
-                var username = UsersLoggedIn[client];
-                UsersLoggedIn[client] = null;
-                if (username != null)
-                {
-                    Clients.Remove(username);
-                }
+                    string username;
+                    string password;
 
-                if (_debug)
-                {
-                    WriteEvent("User " + client.GlobalID + " logged out!", LogType.Info);
-                }
-
-                client.SendMessage(new TagSubjectMessage(LoginTag, LogoutSuccess, new DarkRiftWriter()), SendMode.Reliable);
-                onLogout?.Invoke(username);
-            }
-
-            // Registration Request
-            if (message.Subject == AddUser)
-            {
-                if (!_allowAddUser)
-                    return;
-
-                string username;
-                string password;
-
-                try
-                {
-                    var reader = message.GetReader();
-                    username = reader.ReadString();
-
-                    password = BCrypt.Net.BCrypt.HashPassword(
-                        Encryption.Decrypt(reader.ReadBytes(), _privateKey)
-                        , 10);
-                }
-                catch (Exception ex)
-                {
-                    // Return Error 0 for Invalid Data Packages Recieved
-                    InvalidData(client, LoginTag, AddUserFailed, ex, "Failed to add user!");
-                    return;
-                }
-
-                try
-                {
-                    if (UsernameAvailable(username))
+                    using (var reader = message.GetReader())
                     {
-                        AddNewUser(username, password);
-                        client.SendMessage(new TagSubjectMessage(LoginTag, AddUserSuccess, new DarkRiftWriter()), SendMode.Reliable);
-                    }
-                    else
-                    {
-                        if (_debug)
+                        try
                         {
-                            WriteEvent("User " + client.GlobalID + " failed to sign up!", LogType.Info);
+                            username = reader.ReadString();
+                            password = Encryption.Decrypt(reader.ReadBytes(), _privateKey);
                         }
+                        catch (Exception ex)
+                        {
+                            // Return Error 0 for Invalid Data Packages Recieved
+                            InvalidData(client, LoginTag, LoginFailed, ex, "Failed to log in!");
+                            return;
+                        }
+                    }
 
-                        // Return Error 1 for "Wrong username/password combination"
-                        var writer = new DarkRiftWriter();
-                        writer.Write((byte)1);
-                        client.SendMessage(new TagSubjectMessage(LoginTag, AddUserFailed, writer), SendMode.Reliable);
+                    if (UsersLoggedIn.ContainsValue(username))
+                    {
+                        // Username is already in use -> return Error 3
+                        using (var writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write((byte)3);
+
+                            using (var msg = Message.Create(GetTag(LoginFailed), writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
+                        return;
+                    }
+
+                    try
+                    {
+                        var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
+
+                        if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+                        {
+                            UsersLoggedIn[client] = username;
+                            Clients[username] = client;
+
+                            using (var msg = Message.CreateEmpty(GetTag(LoginSuccess)))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+
+                            if (_debug)
+                            {
+                                WriteEvent("Successful login (" + client.ID + ").", LogType.Info);
+                            }
+                        }
+                        else
+                        {
+                            if (_debug)
+                            {
+                                WriteEvent("User " + client.ID + " couldn't log in!", LogType.Info);
+                            }
+
+                            // Return Error 1 for "Wrong username/password combination"
+                            using (var writer = DarkRiftWriter.Create())
+                            {
+                                writer.Write((byte)1);
+
+                                using (var msg = Message.Create(GetTag(LoginFailed), writer))
+                                {
+                                    client.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Return Error 2 for Database error
+                        _dbConnector.DatabaseError(client, LoginTag, LoginFailed, ex);
                     }
                 }
-                catch (Exception ex)
+
+                // Logout Request
+                if (message.Tag == GetTag(LogoutUser))
                 {
-                    // Return Error 2 for Database error
-                    _dbConnector.DatabaseError(client, LoginTag, AddUserFailed, ex);
+                    var username = UsersLoggedIn[client];
+                    UsersLoggedIn[client] = null;
+
+                    if (username != null)
+                    {
+                        Clients.Remove(username);
+                    }
+
+                    if (_debug)
+                    {
+                        WriteEvent("User " + client.ID + " logged out!", LogType.Info);
+                    }
+
+                    using (var msg = Message.CreateEmpty(GetTag(LogoutSuccess)))
+                    {
+                        client.SendMessage(msg, SendMode.Reliable);
+                    }
+
+                    onLogout?.Invoke(username);
                 }
-            }
+
+                // Registration Request
+                if (message.Tag == GetTag(AddUser))
+                {
+                    if (!_allowAddUser)
+                        return;
+
+                    string username;
+                    string password;
+
+                    try
+                    {
+                        using (var reader = message.GetReader())
+                        {
+                            username = reader.ReadString();
+
+                            password = BCrypt.Net.BCrypt.HashPassword(
+                                Encryption.Decrypt(reader.ReadBytes(), _privateKey)
+                                , 10);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Return Error 0 for Invalid Data Packages Recieved
+                        InvalidData(client, LoginTag, AddUserFailed, ex, "Failed to add user!");
+                        return;
+                    }
+
+                    try
+                    {
+                        if (UsernameAvailable(username))
+                        {
+                            AddNewUser(username, password);
+
+                            using (var msg = Message.CreateEmpty(GetTag(AddUserSuccess)))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
+                        else
+                        {
+                            if (_debug)
+                            {
+                                WriteEvent("User " + client.ID + " failed to sign up!", LogType.Info);
+                            }
+
+                            // Return Error 1 for "Wrong username/password combination"
+                            using (var writer = DarkRiftWriter.Create())
+                            {
+                                writer.Write((byte)1);
+
+                                using (var msg = Message.Create(GetTag(AddUserFailed), writer))
+                                {
+                                    client.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Return Error 2 for Database error
+                        _dbConnector.DatabaseError(client, LoginTag, AddUserFailed, ex);
+                    }
+                }
+            }       
         }
 
         private bool UsernameAvailable(string username)
@@ -297,6 +335,11 @@ namespace LoginPlugin
             {
                 WriteEvent("New User: " + username, LogType.Info);
             }
+        }
+
+        private ushort GetTag(ushort subject)
+        {
+            return _dbConnector.GetTag(LoginTag, subject);
         }
 
         #region Commands
@@ -395,25 +438,37 @@ namespace LoginPlugin
 
         #region ErrorHandling
 
-        public bool PlayerLoggedIn(Client client, byte tag, ushort subject, string error)
+        public bool PlayerLoggedIn(IClient client, byte tag, ushort subject, string error)
         {
             if (UsersLoggedIn[client] != null)
                 return true;
 
-            var writer = new DarkRiftWriter();
-            writer.Write((byte)1);
-            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write((byte)1);
 
+                using (var msg = Message.Create(_dbConnector.GetTag(tag, subject), writer))
+                {
+                    client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
+            
             WriteEvent(error + " Player wasn't logged in.", LogType.Warning);
             return false;
         }
 
-        public void InvalidData(Client client, byte tag, ushort subject, Exception e, string error)
+        public void InvalidData(IClient client, byte tag, ushort subject, Exception e, string error)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write((byte)0);
-            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write((byte)0);
 
+                using (var msg = Message.Create(_dbConnector.GetTag(tag, subject), writer))
+                {
+                    client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
+            
             WriteEvent(error + " Invalid data received: " + e.Message + " - " + e.StackTrace, LogType.Warning);
         }
 
