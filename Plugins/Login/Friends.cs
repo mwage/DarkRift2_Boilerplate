@@ -25,22 +25,22 @@ namespace LoginPlugin
         private const byte FriendsTag = 1;
 
         // Subjects
-        private const ushort FriendRequest = 0;
-        private const ushort RequestFailed = 1;
-        private const ushort RequestSuccess = 2;
-        private const ushort AcceptRequest = 3;
-        private const ushort AcceptRequestSuccess = 4;
-        private const ushort AcceptRequestFailed = 5;
-        private const ushort DeclineRequest = 6;
-        private const ushort DeclineRequestSuccess = 7;
-        private const ushort DeclineRequestFailed = 8;
-        private const ushort RemoveFriend = 9;
-        private const ushort RemoveFriendSuccess = 10;
-        private const ushort RemoveFriendFailed = 11;
-        private const ushort GetAllFriends = 12;
-        private const ushort GetAllFriendsFailed = 13;
-        private const ushort FriendLoggedIn = 14;
-        private const ushort FriendLoggedOut = 15;
+        private const ushort FriendRequest = 0 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort RequestFailed = 1 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort RequestSuccess = 2 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort AcceptRequest = 3 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort AcceptRequestSuccess = 4 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort AcceptRequestFailed = 5 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort DeclineRequest = 6 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort DeclineRequestSuccess = 7 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort DeclineRequestFailed = 8 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort RemoveFriend = 9 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort RemoveFriendSuccess = 10 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort RemoveFriendFailed = 11 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort GetAllFriends = 12 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort GetAllFriendsFailed = 13 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort FriendLoggedIn = 14 + FriendsTag * DbConnector.SubjectsPerTag;
+        private const ushort FriendLoggedOut = 15 + FriendsTag * DbConnector.SubjectsPerTag;
 
         private const string ConfigPath = @"Plugins\Friends.xml";
         private DbConnector _dbConnector;
@@ -108,10 +108,10 @@ namespace LoginPlugin
                 var client = e.Client;
 
                 // Friend Request
-                if (message.Tag == GetTag(FriendRequest))
+                if (message.Tag == FriendRequest)
                 {
                     // If player isn't logged in -> return error 1
-                    if (!_loginPlugin.PlayerLoggedIn(client, FriendsTag, RequestFailed, "Friend request failed."))
+                    if (!_loginPlugin.PlayerLoggedIn(client, RequestFailed, "Friend request failed."))
                         return;
 
                     var senderName = _loginPlugin.UsersLoggedIn[client];
@@ -127,7 +127,7 @@ namespace LoginPlugin
                     catch (Exception ex)
                     {
                         // Return Error 0 for Invalid Data Packages Recieved
-                        _loginPlugin.InvalidData(client, FriendsTag, RequestFailed, ex, "Friend Request Failed! ");
+                        _loginPlugin.InvalidData(client, RequestFailed, ex, "Friend Request Failed! ");
                         return;
                     }
 
@@ -137,11 +137,11 @@ namespace LoginPlugin
                         if (receiverUser == null)
                         {
                             // No user with that name found -> return error 3
-                            using (var wr = DarkRiftWriter.Create())
+                            using (var writer = DarkRiftWriter.Create())
                             {
-                                wr.Write((byte) 3);
+                                writer.Write((byte) 3);
 
-                                using (var msg = Message.Create(GetTag(RequestFailed), wr))
+                                using (var msg = Message.Create(RequestFailed, writer))
                                 {
                                     client.SendMessage(msg, SendMode.Reliable);
                                 }
@@ -158,11 +158,11 @@ namespace LoginPlugin
                             receiverUser.OpenFriendRequests.Contains(senderName))
                         {
                             // Users are already friends or have an open request -> return error 4
-                            using (var wr = DarkRiftWriter.Create())
+                            using (var writer = DarkRiftWriter.Create())
                             {
-                                wr.Write((byte) 4);
+                                writer.Write((byte) 4);
 
-                                using (var msg = Message.Create(GetTag(RequestFailed), wr))
+                                using (var msg = Message.Create(RequestFailed, writer))
                                 {
                                     client.SendMessage(msg, SendMode.Reliable);
                                 }
@@ -183,7 +183,7 @@ namespace LoginPlugin
                         {
                             writer.Write(receiver);
 
-                            using (var msg = Message.Create(GetTag(RequestSuccess), writer))
+                            using (var msg = Message.Create(RequestSuccess, writer))
                             {
                                 client.SendMessage(msg, SendMode.Reliable);
                             }
@@ -199,11 +199,11 @@ namespace LoginPlugin
                         {
                             var receivingClient = _loginPlugin.Clients[receiver];
 
-                            using (var wr = DarkRiftWriter.Create())
+                            using (var writer = DarkRiftWriter.Create())
                             {
-                                wr.Write(senderName);
+                                writer.Write(senderName);
 
-                                using (var msg = Message.Create(GetTag(FriendRequest), wr))
+                                using (var msg = Message.Create(FriendRequest, writer))
                                 {
                                     receivingClient.SendMessage(msg,SendMode.Reliable);
                                 }
@@ -213,16 +213,15 @@ namespace LoginPlugin
                     catch (Exception ex)
                     {
                         // Return Error 2 for Database error
-                        _dbConnector.DatabaseError(client, FriendsTag, RequestFailed, ex);
+                        _dbConnector.DatabaseError(client, RequestFailed, ex);
                     }
                 }
 
                 // Friend Request Declined
-                if (message.Subject == DeclineRequest)
+                if (message.Tag == DeclineRequest)
                 {
                     // If player isn't logged in -> return error 1
-                    if (!_loginPlugin.PlayerLoggedIn(client, FriendsTag, DeclineRequestFailed,
-                        "DeclineFriendRequest failed."))
+                    if (!_loginPlugin.PlayerLoggedIn(client, DeclineRequestFailed, "DeclineFriendRequest failed."))
                         return;
 
                     var senderName = _loginPlugin.UsersLoggedIn[client];
@@ -230,14 +229,15 @@ namespace LoginPlugin
 
                     try
                     {
-                        var reader = message.GetReader();
-                        receiver = reader.ReadString();
+                        using (var reader = message.GetReader())
+                        {
+                            receiver = reader.ReadString();
+                        }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 0 for Invalid Data Packages Recieved
-                        _loginPlugin.InvalidData(client, FriendsTag, DeclineRequestFailed, ex,
-                            "Decline Request Failed!");
+                        _loginPlugin.InvalidData(client, DeclineRequestFailed, ex, "Decline Request Failed!");
                         return;
                     }
 
@@ -245,13 +245,17 @@ namespace LoginPlugin
                     {
                         // Delete the request from the database for both users
                         RemoveRequests(senderName, receiver);
+                        
+                        using (var writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(receiver);
+                            writer.Write(true);
 
-                        var writer = new DarkRiftWriter();
-                        writer.Write(receiver);
-                        writer.Write(true);
-
-                        client.SendMessage(new TagSubjectMessage(FriendsTag, DeclineRequestSuccess, writer),
-                            SendMode.Reliable);
+                            using (var msg = Message.Create(DeclineRequestSuccess, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
 
                         if (_debug)
                         {
@@ -262,27 +266,31 @@ namespace LoginPlugin
                         if (_loginPlugin.Clients.ContainsKey(receiver))
                         {
                             var receivingClient = _loginPlugin.Clients[receiver];
-                            var wr = new DarkRiftWriter();
-                            wr.Write(senderName);
-                            wr.Write(false);
 
-                            receivingClient.SendMessage(new TagSubjectMessage(FriendsTag, DeclineRequestSuccess, wr),
-                                SendMode.Reliable);
+                            using (var writer = DarkRiftWriter.Create())
+                            {
+                                writer.Write(senderName);
+                                writer.Write(false);
+
+                                using (var msg = Message.Create(DeclineRequestSuccess, writer))
+                                {
+                                    receivingClient.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 2 for Database error
-                        _dbConnector.DatabaseError(client, FriendsTag, DeclineRequestFailed, ex);
+                        _dbConnector.DatabaseError(client, DeclineRequestFailed, ex);
                     }
                 }
 
                 // Friend Request Accepted
-                if (message.Subject == AcceptRequest)
+                if (message.Tag == AcceptRequest)
                 {
                     // If player isn't logged in -> return error 1
-                    if (!_loginPlugin.PlayerLoggedIn(client, FriendsTag, AcceptRequestFailed,
-                        "AcceptFriendRequest failed."))
+                    if (!_loginPlugin.PlayerLoggedIn(client, AcceptRequestFailed, "AcceptFriendRequest failed."))
                         return;
 
                     var senderName = _loginPlugin.UsersLoggedIn[client];
@@ -290,13 +298,15 @@ namespace LoginPlugin
 
                     try
                     {
-                        var reader = message.GetReader();
-                        receiver = reader.ReadString();
+                        using (var reader = message.GetReader())
+                        {
+                            receiver = reader.ReadString();
+                        }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 0 for Invalid Data Packages Recieved
-                        _loginPlugin.InvalidData(client, FriendsTag, AcceptRequestFailed, ex, "Accept Request Failed!");
+                        _loginPlugin.InvalidData(client, AcceptRequestFailed, ex, "Accept Request Failed!");
                         return;
                     }
 
@@ -308,12 +318,16 @@ namespace LoginPlugin
 
                         var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
 
-                        var writer = new DarkRiftWriter();
-                        writer.Write(receiver);
-                        writer.Write(receiverOnline);
+                        using (var writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(receiver);
+                            writer.Write(receiverOnline);
 
-                        client.SendMessage(new TagSubjectMessage(FriendsTag, AcceptRequestSuccess, writer),
-                            SendMode.Reliable);
+                            using (var msg = Message.Create(AcceptRequestSuccess, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
 
                         if (_debug)
                         {
@@ -324,26 +338,31 @@ namespace LoginPlugin
                         if (receiverOnline)
                         {
                             var receivingClient = _loginPlugin.Clients[receiver];
-                            var wr = new DarkRiftWriter();
-                            wr.Write(senderName);
-                            wr.Write(true);
 
-                            receivingClient.SendMessage(new TagSubjectMessage(FriendsTag, AcceptRequestSuccess, wr),
-                                SendMode.Reliable);
+                            using (var writer = DarkRiftWriter.Create())
+                            {
+                                writer.Write(senderName);
+                                writer.Write(true);
+
+                                using (var msg = Message.Create(AcceptRequestSuccess, writer))
+                                {
+                                    receivingClient.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 2 for Database error
-                        _dbConnector.DatabaseError(client, FriendsTag, AcceptRequestFailed, ex);
+                        _dbConnector.DatabaseError(client, AcceptRequestFailed, ex);
                     }
                 }
 
                 // Remove Friend
-                if (message.Subject == RemoveFriend)
+                if (message.Tag == RemoveFriend)
                 {
                     // If player isn't logged in -> return error 1
-                    if (!_loginPlugin.PlayerLoggedIn(client, FriendsTag, RemoveFriendFailed, "RemoveFriend failed."))
+                    if (!_loginPlugin.PlayerLoggedIn(client, RemoveFriendFailed, "RemoveFriend failed."))
                         return;
 
                     var senderName = _loginPlugin.UsersLoggedIn[client];
@@ -351,13 +370,15 @@ namespace LoginPlugin
 
                     try
                     {
-                        var reader = message.GetReader();
-                        receiver = reader.ReadString();
+                        using (var reader = message.GetReader())
+                        {
+                            receiver = reader.ReadString();
+                        }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 0 for Invalid Data Packages Recieved
-                        _loginPlugin.InvalidData(client, FriendsTag, RemoveFriendFailed, ex, "Remove Friend Failed!");
+                        _loginPlugin.InvalidData(client, RemoveFriendFailed, ex, "Remove Friend Failed!");
                         return;
                     }
 
@@ -366,12 +387,16 @@ namespace LoginPlugin
                         // Delete the names from the friendlist in the database for both users
                         RemoveFriends(senderName, receiver);
 
-                        var writer = new DarkRiftWriter();
-                        writer.Write(receiver);
-                        writer.Write(true);
+                        using (var writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(receiver);
+                            writer.Write(true);
 
-                        client.SendMessage(new TagSubjectMessage(FriendsTag, RemoveFriendSuccess, writer),
-                            SendMode.Reliable);
+                            using (var msg = Message.Create(RemoveFriendSuccess, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
 
                         if (_debug)
                         {
@@ -382,26 +407,31 @@ namespace LoginPlugin
                         if (_loginPlugin.Clients.ContainsKey(receiver))
                         {
                             var receivingClient = _loginPlugin.Clients[receiver];
-                            var wr = new DarkRiftWriter();
-                            wr.Write(senderName);
-                            wr.Write(false);
 
-                            receivingClient.SendMessage(new TagSubjectMessage(FriendsTag, RemoveFriendSuccess, wr),
-                                SendMode.Reliable);
+                            using (var writer = DarkRiftWriter.Create())
+                            {
+                                writer.Write(senderName);
+                                writer.Write(false);
+
+                                using (var msg = Message.Create(RemoveFriendSuccess, writer))
+                                {
+                                    receivingClient.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         // Return Error 2 for Database error
-                        _dbConnector.DatabaseError(client, FriendsTag, RemoveFriendFailed, ex);
+                        _dbConnector.DatabaseError(client, RemoveFriendFailed, ex);
                     }
                 }
 
                 // Get all friends and their status
-                if (message.Subject == GetAllFriends)
+                if (message.Tag == GetAllFriends)
                 {
                     // If player isn't logged in -> return error 1
-                    if (!_loginPlugin.PlayerLoggedIn(client, FriendsTag, GetAllFriendsFailed, "GetAllFriends failed."))
+                    if (!_loginPlugin.PlayerLoggedIn(client, GetAllFriendsFailed, "GetAllFriends failed."))
                         return;
 
                     var senderName = _loginPlugin.UsersLoggedIn[client];
@@ -412,33 +442,43 @@ namespace LoginPlugin
                         var onlineFriends = new List<string>();
                         var offlineFriends = new List<string>();
 
-                        var writer = new DarkRiftWriter();
-                        writer.Write(senderName);
-
-                        foreach (var friend in user.Friends)
+                        using (var writer = DarkRiftWriter.Create())
                         {
-                            if (_loginPlugin.Clients.ContainsKey(friend))
-                            {
-                                onlineFriends.Add(friend);
+                            writer.Write(senderName);
 
-                                // let online friends know he logged in
-                                var cl = _loginPlugin.Clients[friend];
-                                cl.SendMessage(new TagSubjectMessage(FriendsTag, FriendLoggedIn, writer),
-                                    SendMode.Reliable);
-                            }
-                            else
+                            foreach (var friend in user.Friends)
                             {
-                                offlineFriends.Add(friend);
+                                if (_loginPlugin.Clients.ContainsKey(friend))
+                                {
+                                    onlineFriends.Add(friend);
+
+                                    // let online friends know he logged in
+                                    var cl = _loginPlugin.Clients[friend];
+
+                                    using (var msg = Message.Create(FriendLoggedIn, writer))
+                                    {
+                                        cl.SendMessage(msg, SendMode.Reliable);
+                                    }
+                                }
+                                else
+                                {
+                                    offlineFriends.Add(friend);
+                                }
                             }
                         }
 
-                        var wr = new DarkRiftWriter();
-                        wr.Write(onlineFriends.ToArray());
-                        wr.Write(offlineFriends.ToArray());
-                        wr.Write(user.OpenFriendRequests.ToArray());
-                        wr.Write(user.UnansweredFriendRequests.ToArray());
+                        using (var writer = DarkRiftWriter.Create())
+                        {
+                            writer.Write(onlineFriends.ToArray());
+                            writer.Write(offlineFriends.ToArray());
+                            writer.Write(user.OpenFriendRequests.ToArray());
+                            writer.Write(user.UnansweredFriendRequests.ToArray());
 
-                        client.SendMessage(new TagSubjectMessage(FriendsTag, GetAllFriends, wr), SendMode.Reliable);
+                            using (var msg = Message.Create(GetAllFriends, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
+                        }
 
                         if (_debug)
                         {
@@ -448,7 +488,7 @@ namespace LoginPlugin
                     catch (Exception ex)
                     {
                         // Return Error 2 for Database error
-                        _dbConnector.DatabaseError(client, FriendsTag, GetAllFriendsFailed, ex);
+                        _dbConnector.DatabaseError(client, GetAllFriendsFailed, ex);
                     }
                 }
             }
@@ -457,24 +497,25 @@ namespace LoginPlugin
         public void LogoutFriend(string username)
         {
             var friends = _dbConnector.Users.AsQueryable().First(u => u.Username == username).Friends;
-            var writer = new DarkRiftWriter();
-            writer.Write(username);
 
-            foreach (var friend in friends)
+            using (var writer = DarkRiftWriter.Create())
             {
-                if (_loginPlugin.Clients.ContainsKey(friend))
+                writer.Write(username);
+
+                foreach (var friend in friends)
                 {
-                    // let online friends know he logged out
-                    var cl = _loginPlugin.Clients[friend];
-                    cl.SendMessage(new TagSubjectMessage(FriendsTag, FriendLoggedOut, writer),
-                        SendMode.Reliable);
+                    if (_loginPlugin.Clients.ContainsKey(friend))
+                    {
+                        // let online friends know he logged out
+                        var client = _loginPlugin.Clients[friend];
+
+                        using (var msg = Message.Create(FriendLoggedOut, writer))
+                        {
+                            client.SendMessage(msg, SendMode.Reliable);
+                        }
+                    }
                 }
             }
-        }
-
-        private ushort GetTag(ushort subject)
-        {
-            return _dbConnector.GetTag(FriendsTag, subject);
         }
 
         #region DbHelpers

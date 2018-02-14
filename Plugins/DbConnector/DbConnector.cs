@@ -13,9 +13,9 @@ namespace DbConnectorPlugin
         public override bool ThreadSafe => false;
 
         public IMongoCollection<User> Users { get; private set; }
+        public const ushort SubjectsPerTag = 256;
 
         private const string ConfigPath = @"Plugins\DbConnector.xml";
-        private const ushort SubjectsPerTag = byte.MaxValue;
         private readonly IMongoDatabase _database;
 
         public DbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
@@ -77,27 +77,9 @@ namespace DbConnectorPlugin
             Users = _database.GetCollection<User>("users");
         }
 
-        #region Tags
-
-        public ushort GetTag(byte tag, ushort subject)
-        {
-            try
-            {
-                var newTag = (ushort) (subject + tag * SubjectsPerTag);
-                return newTag;
-            }
-            catch (OverflowException e)
-            {
-                WriteEvent("Tag Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
-                return ushort.MaxValue;
-            }
-        }
-
-        #endregion
-
         #region ErrorHandling
 
-        public void DatabaseError(IClient client, byte tag, ushort subject, Exception e)
+        public void DatabaseError(IClient client, ushort tag, Exception e)
         {
             WriteEvent("Database Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
 
@@ -105,7 +87,7 @@ namespace DbConnectorPlugin
             {
                 writer.Write((byte)2);
 
-                using (var msg = Message.Create(GetTag(tag, subject), writer))
+                using (var msg = Message.Create(tag, writer))
                 {
                     client.SendMessage(msg, SendMode.Reliable);
                 }
