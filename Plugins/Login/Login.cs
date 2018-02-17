@@ -24,18 +24,22 @@ namespace LoginPlugin
             new Command("Online", "Logs number of online users", "", UsersOnlineCommand)
         };
 
+        // Maximum number of Tags per Plugin
+        public const ushort TagsPerPlugin = 256;
+
         // Tag
         private const byte LoginTag = 0;
+        private const ushort Shift = LoginTag * TagsPerPlugin;
 
         // Subjects
-        private const ushort LoginUser = 0 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort LogoutUser = 1 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort AddUser = 2 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort LoginSuccess = 3 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort LoginFailed = 4 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort LogoutSuccess = 5 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort AddUserSuccess = 6 + LoginTag * DbConnector.SubjectsPerTag;
-        private const ushort AddUserFailed = 7 + LoginTag * DbConnector.SubjectsPerTag;
+        private const ushort LoginUser = 0 + Shift;
+        private const ushort LogoutUser = 1 + Shift;
+        private const ushort AddUser = 2 + Shift;
+        private const ushort LoginSuccess = 3 + Shift;
+        private const ushort LoginFailed = 4 + Shift;
+        private const ushort LogoutSuccess = 5 + Shift;
+        private const ushort AddUserSuccess = 6 + Shift;
+        private const ushort AddUserFailed = 7 + Shift;
 
         // Connects the Client with his Username
         public Dictionary<IClient, string> UsersLoggedIn = new Dictionary<IClient, string>();
@@ -138,12 +142,14 @@ namespace LoginPlugin
         {
             using (var message = e.GetMessage())
             {
-                var client = e.Client;
+                // Check if message is meant for this plugin
+                if (message.Tag >= TagsPerPlugin * (LoginTag + 1))
+                    return;
 
+                var client = e.Client;
 
                 switch (message.Tag)
                 {
-                    // Login Request
                     case LoginUser:
                     {
                         // If user is already logged in (shouldn't happen though)
@@ -236,7 +242,6 @@ namespace LoginPlugin
                         break;
                     }
 
-                    // Logout Request
                     case LogoutUser:
                     {
                         var username = UsersLoggedIn[client];
@@ -261,7 +266,6 @@ namespace LoginPlugin
                         break;
                     }
 
-                    // Register Request
                     case AddUser:
                     {
                         if (!_allowAddUser)

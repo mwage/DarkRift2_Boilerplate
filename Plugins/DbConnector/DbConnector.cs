@@ -13,7 +13,6 @@ namespace DbConnectorPlugin
         public override bool ThreadSafe => false;
 
         public IMongoCollection<User> Users { get; private set; }
-        public const ushort SubjectsPerTag = 256;
 
         private const string ConfigPath = @"Plugins\DbConnector.xml";
         private readonly IMongoDatabase _database;
