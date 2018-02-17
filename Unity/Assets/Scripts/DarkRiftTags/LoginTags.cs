@@ -1,6 +1,6 @@
 ﻿namespace DarkRiftTags
 {
-    public class LoginSubjects
+    public class LoginTags
     {
         private const ushort Shift = Tags.Login * Tags.TagsPerPlugin;
 

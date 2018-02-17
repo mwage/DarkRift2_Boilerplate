@@ -1,6 +1,6 @@
 ﻿namespace DarkRiftTags
 {
-    public class RoomSubjects
+    public class RoomTags
     {
         private const ushort Shift = Tags.Room * Tags.TagsPerPlugin;
 

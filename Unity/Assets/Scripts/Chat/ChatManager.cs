@@ -82,7 +82,7 @@ namespace Chat
                 writer.Write(receiver);
                 writer.Write(message);
 
-                using (var msg = Message.Create(ChatSubjects.PrivateMessage, writer))
+                using (var msg = Message.Create(ChatTags.PrivateMessage, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -96,7 +96,7 @@ namespace Chat
                 writer.Write(RoomManager.CurrentRoom.Id);
                 writer.Write(message);
 
-                using (var msg = Message.Create(ChatSubjects.RoomMessage, writer))
+                using (var msg = Message.Create(ChatTags.RoomMessage, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -110,7 +110,7 @@ namespace Chat
                 writer.Write(groupName);
                 writer.Write(message);
 
-                using (var msg = Message.Create(ChatSubjects.GroupMessage, writer))
+                using (var msg = Message.Create(ChatTags.GroupMessage, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -131,7 +131,7 @@ namespace Chat
             {
                 writer.Write(groupName);
 
-                using (var msg = Message.Create(ChatSubjects.JoinGroup, writer))
+                using (var msg = Message.Create(ChatTags.JoinGroup, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -144,7 +144,7 @@ namespace Chat
             {
                 writer.Write(groupName);
 
-                using (var msg = Message.Create(ChatSubjects.LeaveGroup, writer))
+                using (var msg = Message.Create(ChatTags.LeaveGroup, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -153,7 +153,7 @@ namespace Chat
 
         private static void GetActiveGroups()
         {
-            using (var msg = Message.CreateEmpty(ChatSubjects.GetActiveGroups))
+            using (var msg = Message.CreateEmpty(ChatTags.GetActiveGroups))
             {
                 GameControl.Client.SendMessage(msg, SendMode.Reliable);
             }
@@ -236,221 +236,247 @@ namespace Chat
                 switch (message.Tag)
                 {
                     // Private message received
-                    case ChatSubjects.PrivateMessage:
+                    case ChatTags.PrivateMessage:
                     {
-                        var reader = message.GetReader();
-                        var senderName = reader.ReadString();
-                        var content = reader.ReadString();
-                        var chatMessage = new ChatMessage(senderName, content, MessageType.Private, senderName);
-                        Messages.Add(chatMessage);
+                        using (var reader = message.GetReader())
+                        {
+                            var senderName = reader.ReadString();
+                            var content = reader.ReadString();
+                            var chatMessage = new ChatMessage(senderName, content, MessageType.Private, senderName);
 
-                        onPrivateMessage?.Invoke(chatMessage);
+                            Messages.Add(chatMessage);
+
+                            onPrivateMessage?.Invoke(chatMessage);
+                        }
+
                         break;
                     }
 
                     // Private message sent
-                    case ChatSubjects.SuccessfulPrivateMessage:
+                    case ChatTags.SuccessfulPrivateMessage:
                     {
-                        var reader = message.GetReader();
-                        var senderName = reader.ReadString();
-                        var receiver = reader.ReadString();
-                        var content = reader.ReadString();
-                        var chatMessage = new ChatMessage(senderName, content, MessageType.Private, receiver, true);
-                        Messages.Add(chatMessage);
+                        using (var reader = message.GetReader())
+                        {
+                            var senderName = reader.ReadString();
+                            var receiver = reader.ReadString();
+                            var content = reader.ReadString();
+                            var chatMessage = new ChatMessage(senderName, content, MessageType.Private, receiver, true);
+                            Messages.Add(chatMessage);
 
-                        onPrivateMessage?.Invoke(chatMessage);
+                            onPrivateMessage?.Invoke(chatMessage);
+                        }
                         break;
                     }
 
                     // Room message received
-                    case ChatSubjects.RoomMessage:
+                    case ChatTags.RoomMessage:
                     {
-                        var reader = message.GetReader();
-                        var senderName = reader.ReadString();
-                        var content = reader.ReadString();
-                        var chatMessage = new ChatMessage(senderName, content, MessageType.Room, "Room");
-                        Messages.Add(chatMessage);
+                        using (var reader = message.GetReader())
+                        {
+                            var senderName = reader.ReadString();
+                            var content = reader.ReadString();
+                            var chatMessage = new ChatMessage(senderName, content, MessageType.Room, "Room");
+                            Messages.Add(chatMessage);
 
-                        onRoomMessage?.Invoke(chatMessage);
+                            onRoomMessage?.Invoke(chatMessage);
+                        }
                         break;
                     }
 
                     // Group message received
-                    case ChatSubjects.GroupMessage:
+                    case ChatTags.GroupMessage:
                     {
-                        var reader = message.GetReader();
-                        var groupName = reader.ReadString();
-                        var senderName = reader.ReadString();
-                        var content = reader.ReadString();
-                        var chatMessage = new ChatMessage(senderName, content, MessageType.ChatGroup, groupName);
-                        Messages.Add(chatMessage);
+                        using (var reader = message.GetReader())
+                        {
+                            var groupName = reader.ReadString();
+                            var senderName = reader.ReadString();
+                            var content = reader.ReadString();
+                            var chatMessage = new ChatMessage(senderName, content, MessageType.ChatGroup, groupName);
+                            Messages.Add(chatMessage);
 
-                        onGroupMessage?.Invoke(chatMessage);
+                            onGroupMessage?.Invoke(chatMessage);
+                        }
                         break;
                     }
 
-                    case ChatSubjects.MessageFailed:
+                    case ChatTags.MessageFailed:
                     {
                         var content = "Failed to send message.";
-                        var reader = message.GetReader();
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid Message Failed Error data received.");
-                        }
-                        else
-                        {
-                            switch (reader.ReadByte())
+                            if (reader.Length != 1)
                             {
-                                case 0:
-                                    Debug.Log("Invalid Message data sent!");
-                                    break;
-                                case 1:
-                                    Debug.Log("You're not logged in!");
-                                    SceneManager.LoadScene("Login");
-                                    break;
-                                case 2:
-                                    Debug.Log("You're not part of this chatgroup.");
-                                    content = "Not connected to this chat channel. Try leaving and rejoining!";
-                                    break;
-                                case 3:
-                                    Debug.Log("Failed to send message. Player is offline.");
-                                    content = "Player is offline.";
-                                    break;
-                                default:
-                                    Debug.Log("Invalid errorId!");
-                                    break;
+                                Debug.LogWarning("Invalid Message Failed Error data received.");
+                            }
+                            else
+                            {
+                                switch (reader.ReadByte())
+                                {
+                                    case 0:
+                                        Debug.Log("Invalid Message data sent!");
+                                        break;
+                                    case 1:
+                                        Debug.Log("You're not logged in!");
+                                        SceneManager.LoadScene("Login");
+                                        break;
+                                    case 2:
+                                        Debug.Log("You're not part of this chatgroup.");
+                                        content = "Not connected to this chat channel. Try leaving and rejoining!";
+                                        break;
+                                    case 3:
+                                        Debug.Log("Failed to send message. Player is offline.");
+                                        content = "Player is offline.";
+                                        break;
+                                    default:
+                                        Debug.Log("Invalid errorId!");
+                                        break;
+                                }
                             }
                         }
+                           
                         ServerMessage(content, MessageType.Error);
                         break;
                     }
 
-                    case ChatSubjects.JoinGroup:
+                    case ChatTags.JoinGroup:
                     {
-                        var reader = message.GetReader();
-                        var group = reader.ReadSerializable<ChatGroup>();
-                        ServerMessage("You joined the channel: " + @group.Name, MessageType.ChatGroup);
-
-                        if (!SavedChatGroups.Contains(@group.Name))
+                        using (var reader = message.GetReader())
                         {
-                            SavedChatGroups.Add(@group.Name);
-                            ArrayPrefs.SetStringArray("ChatGroups", SavedChatGroups.ToArray());
-                        }
+                            var group = reader.ReadSerializable<ChatGroup>();
+                            ServerMessage("You joined the channel: " + group.Name, MessageType.ChatGroup);
 
-                        onSuccessfulJoinGroup?.Invoke(@group.Name);
+                            if (!SavedChatGroups.Contains(group.Name))
+                            {
+                                SavedChatGroups.Add(group.Name);
+                                ArrayPrefs.SetStringArray("ChatGroups", SavedChatGroups.ToArray());
+                            }
+
+                            onSuccessfulJoinGroup?.Invoke(group.Name);
+                        }
                         break;
                     }
 
-                    case ChatSubjects.JoinGroupFailed:
+                    case ChatTags.JoinGroupFailed:
                     {
                         var content = "Failed to join chat group.";
-                        var reader = message.GetReader();
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid Join Group Failed Error data received.");
-                        }
-                        else
-                        {
-                            switch (reader.ReadByte())
+                            if (reader.Length != 1)
                             {
-                                case 0:
-                                    Debug.Log("Invalid Join Group data sent!");
-                                    break;
-                                case 1:
-                                    Debug.Log("You're not logged in!");
-                                    SceneManager.LoadScene("Login");
-                                    break;
-                                case 2:
-                                    Debug.Log("Alreay in this chatgroup.");
-                                    content = "You are already in this chat group.";
-                                    break;
-                                default:
-                                    Debug.Log("Invalid errorId!");
-                                    break;
+                                Debug.LogWarning("Invalid Join Group Failed Error data received.");
                             }
+                            else
+                            {
+                                switch (reader.ReadByte())
+                                {
+                                    case 0:
+                                        Debug.Log("Invalid Join Group data sent!");
+                                        break;
+                                    case 1:
+                                        Debug.Log("You're not logged in!");
+                                        SceneManager.LoadScene("Login");
+                                        break;
+                                    case 2:
+                                        Debug.Log("Alreay in this chatgroup.");
+                                        content = "You are already in this chat group.";
+                                        break;
+                                    default:
+                                        Debug.Log("Invalid errorId!");
+                                        break;
+                                }
+                            }
+                            ServerMessage(content, MessageType.Error);
                         }
-                        ServerMessage(content, MessageType.Error);
+                 
                         break;
                     }
 
-                    case ChatSubjects.LeaveGroup:
+                    case ChatTags.LeaveGroup:
                     {
-                        var reader = message.GetReader();
-                        var groupName = reader.ReadString();
-                        ServerMessage("You left the channel: " + groupName, MessageType.ChatGroup);
-
-                        if (SavedChatGroups.Remove(groupName))
+                        using (var reader = message.GetReader())
                         {
-                            ArrayPrefs.SetStringArray("ChatGroups", SavedChatGroups.ToArray());
-                        }
+                            var groupName = reader.ReadString();
+                            ServerMessage("You left the channel: " + groupName, MessageType.ChatGroup);
 
-                        onSuccessfulLeaveGroup?.Invoke(groupName);
+                            if (SavedChatGroups.Remove(groupName))
+                            {
+                                ArrayPrefs.SetStringArray("ChatGroups", SavedChatGroups.ToArray());
+                            }
+
+                            onSuccessfulLeaveGroup?.Invoke(groupName);
+                        }
                         break;
                     }
 
-                    case ChatSubjects.LeaveGroupFailed:
+                    case ChatTags.LeaveGroupFailed:
                     {
                         var content = "Failed to leave chat group.";
-                        var reader = message.GetReader();
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid Leave Group Failed Error data received.");
-                        }
-                        else
-                        {
-                            switch (reader.ReadByte())
+                            if (reader.Length != 1)
                             {
-                                case 0:
-                                    Debug.Log("Invalid Leave Group data sent!");
-                                    break;
-                                case 1:
-                                    Debug.Log("You're not logged in!");
-                                    SceneManager.LoadScene("Login");
-                                    break;
-                                case 2:
-                                    Debug.Log("No such chatgroup chatgroup.");
-                                    content = "There is no chat group with this name.";
-                                    break;
-                                default:
-                                    Debug.Log("Invalid errorId!");
-                                    break;
+                                Debug.LogWarning("Invalid Leave Group Failed Error data received.");
+                            }
+                            else
+                            {
+                                switch (reader.ReadByte())
+                                {
+                                    case 0:
+                                        Debug.Log("Invalid Leave Group data sent!");
+                                        break;
+                                    case 1:
+                                        Debug.Log("You're not logged in!");
+                                        SceneManager.LoadScene("Login");
+                                        break;
+                                    case 2:
+                                        Debug.Log("No such chatgroup chatgroup.");
+                                        content = "There is no chat group with this name.";
+                                        break;
+                                    default:
+                                        Debug.Log("Invalid errorId!");
+                                        break;
+                                }
                             }
                         }
                         ServerMessage(content, MessageType.Error);
                         break;
                     }
 
-                    case ChatSubjects.GetActiveGroups:
+                    case ChatTags.GetActiveGroups:
                     {
-                        var reader = message.GetReader();
-                        var groupList = reader.ReadStrings().ToList();
-                        groupList.Sort(string.CompareOrdinal);
-                        foreach (var group in groupList)
+                        using (var reader = message.GetReader())
                         {
-                            ServerMessage(@group, MessageType.All);
+                            var groupList = reader.ReadStrings().ToList();
+                            groupList.Sort(string.CompareOrdinal);
+                            foreach (var group in groupList)
+                            {
+                                ServerMessage(group, MessageType.All);
+                            }
                         }
                         break;
                     }
 
-                    case ChatSubjects.GetActiveGroupsFailed:
+                    case ChatTags.GetActiveGroupsFailed:
                     {
                         var content = "Failed to get list of chat groups.";
-                        var reader = message.GetReader();
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid Get Active Groups Failed Error data received.");
-                        }
-                        else
-                        {
-                            switch (reader.ReadByte())
+                            if (reader.Length != 1)
                             {
-                                case 1:
-                                    Debug.Log("You're not logged in!");
-                                    SceneManager.LoadScene("Login");
-                                    break;
-                                default:
-                                    Debug.Log("Invalid errorId!");
-                                    break;
+                                Debug.LogWarning("Invalid Get Active Groups Failed Error data received.");
+                            }
+                            else
+                            {
+                                switch (reader.ReadByte())
+                                {
+                                    case 1:
+                                        Debug.Log("You're not logged in!");
+                                        SceneManager.LoadScene("Login");
+                                        break;
+                                    default:
+                                        Debug.Log("Invalid errorId!");
+                                        break;
+                                }
                             }
                         }
                         ServerMessage(content, MessageType.Error);

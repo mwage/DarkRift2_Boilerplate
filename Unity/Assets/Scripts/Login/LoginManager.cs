@@ -45,7 +45,7 @@ namespace Login
                 writer.Write(username);
                 writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-                using (var msg = Message.Create(LoginSubjects.LoginUser, writer))
+                using (var msg = Message.Create(LoginTags.LoginUser, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -59,7 +59,7 @@ namespace Login
                 writer.Write(username);
                 writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-                using (var msg = Message.Create(LoginSubjects.AddUser, writer))
+                using (var msg = Message.Create(LoginTags.AddUser, writer))
                 {
                     GameControl.Client.SendMessage(msg, SendMode.Reliable);
                 }
@@ -71,7 +71,7 @@ namespace Login
             IsLoggedIn = false;
             ChatManager.Messages = new List<ChatMessage>();
 
-            using (var msg = Message.CreateEmpty(LoginSubjects.LogoutUser))
+            using (var msg = Message.CreateEmpty(LoginTags.LogoutUser))
             {
                 GameControl.Client.SendMessage(msg, SendMode.Reliable);
             }
@@ -88,7 +88,7 @@ namespace Login
 
                 switch (message.Tag)
                 {
-                    case LoginSubjects.LoginSuccess:
+                    case LoginTags.LoginSuccess:
                     {
                         IsLoggedIn = true;
 
@@ -96,37 +96,41 @@ namespace Login
                         break;
                     }
 
-                    case LoginSubjects.LoginFailed:
+                    case LoginTags.LoginFailed:
                     {
-                        var reader = message.GetReader();
-
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid LoginFailed Error data received.");
-                            return;
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid LoginFailed Error data received.");
+                                return;
+                            }
+
+                            onFailedLogin?.Invoke(reader.ReadByte());
                         }
 
-                        onFailedLogin?.Invoke(reader.ReadByte());
                         break;
                     }
 
-                    case LoginSubjects.AddUserSuccess:
+                    case LoginTags.AddUserSuccess:
                     {
                         onSuccessfulAddUser?.Invoke();
                         break;
                     }
 
-                    case LoginSubjects.AddUserFailed:
+                    case LoginTags.AddUserFailed:
                     {
-                        var reader = message.GetReader();
-
-                        if (reader.Length != 1)
+                        using (var reader = message.GetReader())
                         {
-                            Debug.LogWarning("Invalid LoginFailed Error data received.");
-                            return;
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid LoginFailed Error data received.");
+                                return;
+                            }
+
+                            onFailedAddUser?.Invoke(reader.ReadByte());
                         }
 
-                        onFailedAddUser?.Invoke(reader.ReadByte());
                         break;
                     }
                 }

@@ -52,7 +52,7 @@ namespace Menus
         {
             using (var message = e.GetMessage())
             {
-                if (message.Tag == LoginSubjects.LogoutSuccess)
+                if (message.Tag == LoginTags.LogoutSuccess)
                 {
                     RoomManager.CurrentRoom = null;
                     RoomManager.LeaveRoom();

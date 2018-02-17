@@ -125,9 +125,11 @@ namespace RoomSystemPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            roomName = reader.ReadString();
-                            isVisible = reader.ReadBoolean();
+                            using (var reader = message.GetReader())
+                            {
+                                roomName = reader.ReadString();
+                                isVisible = reader.ReadBoolean();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -172,8 +174,10 @@ namespace RoomSystemPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            roomId = reader.ReadUInt16();
+                            using (var reader = message.GetReader())
+                            {
+                                roomId = reader.ReadUInt16();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -331,8 +335,10 @@ namespace RoomSystemPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            roomId = reader.ReadUInt16();
+                            using (var reader = message.GetReader())
+                            {
+                                roomId = reader.ReadUInt16();
+                            }
                         }
                         catch (Exception ex)
                         {

@@ -1,6 +1,6 @@
 ﻿namespace DarkRiftTags
 {
-    public class ChatSubjects
+    public class ChatTags
     {
         private const ushort Shift = Tags.Chat * Tags.TagsPerPlugin;
 

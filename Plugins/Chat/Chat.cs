@@ -124,9 +124,11 @@ namespace ChatPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            receiver = reader.ReadString();
-                            content = reader.ReadString();
+                            using (var reader = message.GetReader())
+                            {
+                                receiver = reader.ReadString();
+                                content = reader.ReadString();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -196,9 +198,11 @@ namespace ChatPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            roomId = reader.ReadUInt16();
-                            content = reader.ReadString();
+                            using (var reader = message.GetReader())
+                            {
+                                roomId = reader.ReadUInt16();
+                                content = reader.ReadString();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -252,9 +256,11 @@ namespace ChatPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            groupName = reader.ReadString();
-                            content = reader.ReadString();
+                            using (var reader = message.GetReader())
+                            {
+                                groupName = reader.ReadString();
+                                content = reader.ReadString();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -308,8 +314,10 @@ namespace ChatPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            groupName = reader.ReadString();
+                            using (var reader = message.GetReader())
+                            {
+                                groupName = reader.ReadString();
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -375,8 +383,10 @@ namespace ChatPlugin
 
                         try
                         {
-                            var reader = message.GetReader();
-                            groupName = reader.ReadString();
+                            using (var reader = message.GetReader())
+                            {
+                                groupName = reader.ReadString();
+                            }
                         }
                         catch (Exception ex)
                         {

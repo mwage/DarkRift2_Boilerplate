@@ -1,6 +1,6 @@
 ﻿namespace DarkRiftTags
 {
-    public class FriendSubjects
+    public class FriendTags
     {
         private const ushort Shift = Tags.Friends * Tags.TagsPerPlugin;
 
