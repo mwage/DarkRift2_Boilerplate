@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
-using Chat;
+﻿using Chat;
 using DarkRift;
 using DarkRift.Client;
 using DarkRiftTags;
 using Launcher;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -47,231 +47,279 @@ namespace Rooms
 
         public static void CreateRoom(string roomname, bool isVisible)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(roomname);
-            writer.Write(isVisible);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(roomname);
+                writer.Write(isVisible);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Create, writer), SendMode.Reliable);
+                using (var msg = Message.Create(RoomTags.Create, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void JoinRoom(ushort roomId)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(roomId);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(roomId);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Join, writer), SendMode.Reliable);
+                using (var msg = Message.Create(RoomTags.Join, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void LeaveRoom()
         {
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.Leave, new DarkRiftWriter()), SendMode.Reliable);
+            using (var msg = Message.CreateEmpty(RoomTags.Leave))
+            {
+                GameControl.Client.SendMessage(msg, SendMode.Reliable);
+            }
         }
 
         public static void GetOpenRooms()
         {
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.GetOpenRooms, new DarkRiftWriter()), SendMode.Reliable);
+            using (var msg = Message.CreateEmpty(RoomTags.GetOpenRooms))
+            {
+                GameControl.Client.SendMessage(msg, SendMode.Reliable);
+            }
         }
 
         public static void StartGame()
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(CurrentRoom.Id);
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Room, RoomSubjects.StartGame, writer), SendMode.Reliable);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(CurrentRoom.Id);
+
+                using (var msg = Message.Create(RoomTags.StartGame, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
         #endregion
 
         private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
         {
-            var message = e.Message as TagSubjectMessage;
-
-            if (message == null || message.Tag != Tags.Room)
-                return;
-
-            // Successfully created Room
-            if (message.Subject == RoomSubjects.CreateSuccess)
+            using (var message = e.GetMessage())
             {
-                var reader = message.GetReader();
-                var room = reader.ReadSerializable<Room>();
-                var player = reader.ReadSerializable<Player>();
-
-                IsHost = player.IsHost;
-                CurrentRoom = room;
-                ChatManager.ServerMessage("Created room " + room.Name + "!", MessageType.Room);
-
-                onSuccessfulJoinRoom?.Invoke(new List<Player> { player });
-            }
-
-            // Failed to create Room
-            else if (message.Subject == RoomSubjects.CreateFailed)
-            {
-                ChatManager.ServerMessage("Failed to create room.", MessageType.Error);
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid CreateRoomFailed Error data received.");
+                // Check if message is meant for this plugin
+                if (message.Tag < Tags.TagsPerPlugin * Tags.Room || message.Tag >= Tags.TagsPerPlugin * (Tags.Room + 1))
                     return;
-                }
 
-                switch (reader.ReadByte())
+                switch (message.Tag)
                 {
-                    case 0:
-                        Debug.Log("Invalid CreateRoom data sent!");
-                        break;
-                    case 1:
-                        Debug.Log("Player not logger in!");
-                        SceneManager.LoadScene("Login");
-                        break;
-                    default:
-                        Debug.Log("Invalid errorId!");
-                        break;
-                }
-            }
-
-            // Successfully joined Room
-            else if (message.Subject == RoomSubjects.JoinSuccess)
-            {
-                var reader = message.GetReader();
-                var playerList = new List<Player>();
-
-                var room = reader.ReadSerializable<Room>();
-                while (reader.Position < reader.Length)
-                {
-                    var player = reader.ReadSerializable<Player>();
-                    playerList.Add(player);
-                    ChatManager.ServerMessage(player.Name + " joined the room.", MessageType.Room);
-                }
-
-                IsHost = playerList.Find(p => p.Id == GameControl.Client.ID).IsHost;
-                CurrentRoom = room;
-                onSuccessfulJoinRoom?.Invoke(playerList);
-            }
-
-            // Failed to join Room
-            else if (message.Subject == RoomSubjects.JoinFailed)
-            {
-                var content = "Failed to join room.";
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid JoinRoomRoomFailed Error data received.");
-                }
-                else
-                {
-                    switch (reader.ReadByte())
+                    case RoomTags.CreateSuccess:
                     {
-                        case 0:
-                            Debug.Log("Invalid JoinRoom data sent!");
-                            break;
-                        case 1:
-                            Debug.Log("Player not logger in!");
-                            SceneManager.LoadScene("Login");
-                            break;
-                        case 2:
-                            Debug.Log("Player already is in a room!");
-                            content = "Already in a room.";
-                            break;
-                        case 3:
-                            Debug.Log("Room doesn't exist anymore");
-                            content = "The room doesn't exist anymore.";
-                            break;
-                        default:
-                            Debug.Log("Invalid errorId!");
-                            break;
-                    }
-                }
-                ChatManager.ServerMessage(content, MessageType.Error);
-            }
+                        using (var reader = message.GetReader())
+                        {
+                            var room = reader.ReadSerializable<Room>();
+                            var player = reader.ReadSerializable<Player>();
 
-            // Successfully left Room
-            else if (message.Subject == RoomSubjects.LeaveSuccess)
-            {
-                ChatManager.ServerMessage("You left the room.", MessageType.Room);
-                CurrentRoom = null;
-                onSuccessfulLeaveRoom?.Invoke();
-            }
+                            IsHost = player.IsHost;
+                            CurrentRoom = room;
+                            ChatManager.ServerMessage("Created room " + room.Name + "!", MessageType.Room);
 
-            // Another player joined the Room
-            else if (message.Subject == RoomSubjects.PlayerJoined)
-            {
-                var reader = message.GetReader();
-                var player = reader.ReadSerializable<Player>();
-                ChatManager.ServerMessage(player.Name + " joined the room.", MessageType.Room);
-
-                onPlayerJoined?.Invoke(player);
-            }
-
-            // Another player left the Room
-            else if (message.Subject == RoomSubjects.PlayerLeft)
-            {
-                var reader = message.GetReader();
-                var leftId = reader.ReadUInt32();
-                var newHostId = reader.ReadUInt32();
-                var leaverName = reader.ReadString();
-                ChatManager.ServerMessage(leaverName + " left the room.", MessageType.Room);
-
-                if (newHostId == GameControl.Client.ID)
-                {
-                    IsHost = true;
-                }
-
-                onPlayerLeft?.Invoke(leftId, newHostId);
-            }
-
-            // Received all available Rooms
-            else if (message.Subject == RoomSubjects.GetOpenRooms)
-            {
-                var reader = message.GetReader();
-                var roomList = new List<Room>();
-
-                while (reader.Position < reader.Length)
-                {
-                    roomList.Add(reader.ReadSerializable<Room>());
-                }
-                onReceivedOpenRooms?.Invoke(roomList);
-            }
-
-            // Failed to receive all available Rooms
-            else if (message.Subject == RoomSubjects.GetOpenRoomsFailed)
-            {
-                Debug.Log("Player not logged in!");
-                SceneManager.LoadScene("Login");
-            }
-
-            // Successfully started Game
-            else if (message.Subject == RoomSubjects.StartGameSuccess)
-            {
-                SceneManager.LoadScene("Game");
-            }
-
-            // Failed to start Game
-            else if (message.Subject == RoomSubjects.StartGameFailed)
-            {
-                var content = "Failed to start game.";
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid StartGame Error data received.");
-                    return;
-                }
-
-                switch (reader.ReadByte())
-                {
-                    case 0:
-                        Debug.Log("Invalid CreateRoom data sent!");
+                            onSuccessfulJoinRoom?.Invoke(new List<Player> {player});
+                        }
                         break;
-                    case 1:
+                    }
+
+                    case RoomTags.CreateFailed:
+                    {
+                        ChatManager.ServerMessage("Failed to create room.", MessageType.Error);
+
+                        using (var reader = message.GetReader())
+                        {
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid CreateRoomFailed Error data received.");
+                                return;
+                            }
+
+                            switch (reader.ReadByte())
+                            {
+                                case 0:
+                                    Debug.Log("Invalid CreateRoom data sent!");
+                                    break;
+                                case 1:
+                                    Debug.Log("Player not logger in!");
+                                    SceneManager.LoadScene("Login");
+                                    break;
+                                default:
+                                    Debug.Log("Invalid errorId!");
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+
+                    case RoomTags.JoinSuccess:
+                    {
+                        var playerList = new List<Player>();
+                        using (var reader = message.GetReader())
+                        {
+                            CurrentRoom = reader.ReadSerializable<Room>();
+                            while (reader.Position < reader.Length)
+                            {
+                                var player = reader.ReadSerializable<Player>();
+                                playerList.Add(player);
+                                ChatManager.ServerMessage(player.Name + " joined the room.", MessageType.Room);
+                            }
+
+                            IsHost = playerList.Find(p => p.Id == GameControl.Client.ID).IsHost;
+                        }
+
+                        onSuccessfulJoinRoom?.Invoke(playerList);
+                        break;
+                    }
+
+                    case RoomTags.JoinFailed:
+                    {
+                        var content = "Failed to join room.";
+                        using (var reader = message.GetReader())
+                        {
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid JoinRoomRoomFailed Error data received.");
+                            }
+                            else
+                            {
+                                switch (reader.ReadByte())
+                                {
+                                    case 0:
+                                        Debug.Log("Invalid JoinRoom data sent!");
+                                        break;
+                                    case 1:
+                                        Debug.Log("Player not logger in!");
+                                        SceneManager.LoadScene("Login");
+                                        break;
+                                    case 2:
+                                        Debug.Log("Player already is in a room!");
+                                        content = "Already in a room.";
+                                        break;
+                                    case 3:
+                                        Debug.Log("Room doesn't exist anymore");
+                                        content = "The room doesn't exist anymore.";
+                                        break;
+                                    default:
+                                        Debug.Log("Invalid errorId!");
+                                        break;
+                                }
+                            }
+                        }
+
+                        ChatManager.ServerMessage(content, MessageType.Error);
+                        break;
+                    }
+
+                    case RoomTags.LeaveSuccess:
+                    {
+                        ChatManager.ServerMessage("You left the room.", MessageType.Room);
+                        CurrentRoom = null;
+                        onSuccessfulLeaveRoom?.Invoke();
+                        break;
+                    }
+
+                    // Another player joined
+                    case RoomTags.PlayerJoined:
+                    {
+                        using (var reader = message.GetReader())
+                        {
+                            var player = reader.ReadSerializable<Player>();
+                            ChatManager.ServerMessage(player.Name + " joined the room.", MessageType.Room);
+
+                            onPlayerJoined?.Invoke(player);
+                        }
+                        break;
+                    }
+
+                    // Another player left
+                    case RoomTags.PlayerLeft:
+                    {
+                        using (var reader = message.GetReader())
+                        {
+                            var leftId = reader.ReadUInt32();
+                            var newHostId = reader.ReadUInt32();
+                            var leaverName = reader.ReadString();
+                            ChatManager.ServerMessage(leaverName + " left the room.", MessageType.Room);
+
+                            if (newHostId == GameControl.Client.ID)
+                            {
+                                IsHost = true;
+                            }
+
+                            onPlayerLeft?.Invoke(leftId, newHostId);
+                        }
+                        break;
+                    }
+
+                    case RoomTags.GetOpenRooms:
+                    {
+                        var roomList = new List<Room>();
+
+                        using (var reader = message.GetReader())
+                        {
+                            while (reader.Position < reader.Length)
+                            {
+                                roomList.Add(reader.ReadSerializable<Room>());
+                            }
+                        }
+
+                        onReceivedOpenRooms?.Invoke(roomList);
+                        break;
+                    }
+
+                    case RoomTags.GetOpenRoomsFailed:
+                    {
                         Debug.Log("Player not logged in!");
                         SceneManager.LoadScene("Login");
                         break;
-                    case 2:
-                        Debug.Log("You are not the host!");
-                        content = "Only the host can start a game!";
+                    }
+
+                    case RoomTags.StartGameSuccess:
+                    {
+                        SceneManager.LoadScene("Game");
                         break;
-                    default:
-                        Debug.Log("Invalid errorId!");
+                    }
+
+                    case RoomTags.StartGameFailed:
+                    {
+                        var content = "Failed to start game.";
+                        using (var reader = message.GetReader())
+                        {
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid StartGame Error data received.");
+                                return;
+                            }
+
+                            switch (reader.ReadByte())
+                            {
+                                case 0:
+                                    Debug.Log("Invalid CreateRoom data sent!");
+                                    break;
+                                case 1:
+                                    Debug.Log("Player not logged in!");
+                                    SceneManager.LoadScene("Login");
+                                    break;
+                                case 2:
+                                    Debug.Log("You are not the host!");
+                                    content = "Only the host can start a game!";
+                                    break;
+                                default:
+                                    Debug.Log("Invalid errorId!");
+                                    break;
+                            }
+                        }
+
+                        ChatManager.ServerMessage(content, MessageType.Error);
                         break;
+                    }
                 }
-                ChatManager.ServerMessage(content, MessageType.Error);
             }
         }
     }

@@ -40,20 +40,30 @@ namespace Login
 
         public static void Login(string username, string password)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(username);
-            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(username);
+                writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.LoginUser, writer), SendMode.Reliable);
+                using (var msg = Message.Create(LoginTags.LoginUser, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void AddUser(string username, string password)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(username);
-            writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(username);
+                writer.Write(Rsa.Encrypt(Encoding.UTF8.GetBytes(password)));
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.AddUser, writer), SendMode.Reliable);
+                using (var msg = Message.Create(LoginTags.AddUser, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void Logout()
@@ -61,58 +71,69 @@ namespace Login
             IsLoggedIn = false;
             ChatManager.Messages = new List<ChatMessage>();
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Login, LoginSubjects.LogoutUser, new DarkRiftWriter()), SendMode.Reliable);
+            using (var msg = Message.CreateEmpty(LoginTags.LogoutUser))
+            {
+                GameControl.Client.SendMessage(msg, SendMode.Reliable);
+            }
         }
         #endregion
 
         private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
         {
-            var message = e.Message as TagSubjectMessage;
-
-            if (message == null || message.Tag != Tags.Login)
-                return;
-
-            // Successfully logged in
-            if (message.Subject == LoginSubjects.LoginSuccess)
+            using (var message = e.GetMessage())
             {
-                IsLoggedIn = true;
-
-
-                onSuccessfulLogin?.Invoke();
-            }
-
-            // Failed to log in
-            else if (message.Subject == LoginSubjects.LoginFailed)
-            {
-                var reader = message.GetReader();
-
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid LoginFailed Error data received.");
+                // Check if message is meant for this plugin
+                if (message.Tag >= Tags.TagsPerPlugin * (Tags.Login + 1))
                     return;
-                }
 
-                onFailedLogin?.Invoke(reader.ReadByte());
-            }
-
-            // Successfully added a new user
-            else if (message.Subject == LoginSubjects.AddUserSuccess)
-            {
-                onSuccessfulAddUser?.Invoke();
-            }
-
-            // Failed to add a new user
-            else if (message.Subject == LoginSubjects.AddUserFailed)
-            {
-                var reader = message.GetReader();
-
-                if (reader.Length != 1)
+                switch (message.Tag)
                 {
-                    Debug.LogWarning("Invalid LoginFailed Error data received.");
-                    return;
-                }
+                    case LoginTags.LoginSuccess:
+                    {
+                        IsLoggedIn = true;
 
-                onFailedAddUser?.Invoke(reader.ReadByte());
+                        onSuccessfulLogin?.Invoke();
+                        break;
+                    }
+
+                    case LoginTags.LoginFailed:
+                    {
+                        using (var reader = message.GetReader())
+                        {
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid LoginFailed Error data received.");
+                                return;
+                            }
+
+                            onFailedLogin?.Invoke(reader.ReadByte());
+                        }
+
+                        break;
+                    }
+
+                    case LoginTags.AddUserSuccess:
+                    {
+                        onSuccessfulAddUser?.Invoke();
+                        break;
+                    }
+
+                    case LoginTags.AddUserFailed:
+                    {
+                        using (var reader = message.GetReader())
+                        {
+                            if (reader.Length != 1)
+                            {
+                                Debug.LogWarning("Invalid LoginFailed Error data received.");
+                                return;
+                            }
+
+                            onFailedAddUser?.Invoke(reader.ReadByte());
+                        }
+
+                        break;
+                    }
+                }
             }
         }
     }

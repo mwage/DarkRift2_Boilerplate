@@ -1,9 +1,9 @@
-﻿using System;
-using System.IO;
-using System.Xml.Linq;
-using DarkRift;
+﻿using DarkRift;
 using DarkRift.Server;
 using MongoDB.Driver;
+using System;
+using System.IO;
+using System.Xml.Linq;
 
 namespace DbConnectorPlugin
 {
@@ -78,13 +78,19 @@ namespace DbConnectorPlugin
 
         #region ErrorHandling
 
-        public void DatabaseError(Client client, byte tag, ushort subject, Exception e)
+        public void DatabaseError(IClient client, ushort tag, Exception e)
         {
             WriteEvent("Database Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
 
-            var writer = new DarkRiftWriter();
-            writer.Write((byte)2);
-            client.SendMessage(new TagSubjectMessage(tag, subject, writer), SendMode.Reliable);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write((byte)2);
+
+                using (var msg = Message.Create(tag, writer))
+                {
+                    client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         #endregion

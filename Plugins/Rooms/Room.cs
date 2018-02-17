@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using DarkRift;
+﻿using DarkRift;
 using DarkRift.Server;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RoomSystemPlugin
 {
@@ -10,7 +10,7 @@ namespace RoomSystemPlugin
         public ushort Id { get; }
         public string Name { get; }
         public List<Player> PlayerList = new List<Player>();
-        public List<Client> Clients = new List<Client>();
+        public List<IClient> Clients = new List<IClient>();
         public byte MaxPlayers { get; } = 10;
         public bool HasStarted { get; set; }
         public bool IsVisible { get; }
@@ -23,7 +23,7 @@ namespace RoomSystemPlugin
             HasStarted = false;
         }
 
-        internal bool AddPlayer(Player player, Client client)
+        internal bool AddPlayer(Player player, IClient client)
         {
             if (PlayerList.Count >= MaxPlayers || HasStarted)
                 return false;
@@ -33,12 +33,12 @@ namespace RoomSystemPlugin
             return true;
         }
 
-        internal bool RemovePlayer(Client client)
+        internal bool RemovePlayer(IClient client)
         {
-            if (PlayerList.All(p => p.Id != client.GlobalID) && !Clients.Contains(client))
+            if (PlayerList.All(p => p.Id != client.ID) && !Clients.Contains(client))
                 return false;
 
-            PlayerList.Remove(PlayerList.Find(p => p.Id == client.GlobalID));
+            PlayerList.Remove(PlayerList.Find(p => p.Id == client.ID));
             Clients.Remove(client);
             return true;
         }

@@ -1,21 +1,21 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using DarkRift;
+﻿using DarkRift;
 using DarkRift.Server;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ChatPlugin
 {
     public class ChatGroup : IDarkRiftSerializable
     {
         public string Name { get; }
-        public Dictionary<string, Client> Users = new Dictionary<string, Client>();
+        public Dictionary<string, IClient> Users = new Dictionary<string, IClient>();
 
         public ChatGroup(string name)
         {
             Name = name;
         }
 
-        internal bool AddPlayer(string username, Client client)
+        internal bool AddPlayer(string username, IClient client)
         {
             if (Users.ContainsKey(username))
                 return false;
