@@ -50,13 +50,14 @@ namespace Menus
         // Handle Logout
         private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
         {
-            var message = e.Message as TagSubjectMessage;
-
-            if (message != null && message.Tag == Tags.Login && message.Subject == LoginSubjects.LogoutSuccess)
+            using (var message = e.GetMessage())
             {
-                RoomManager.CurrentRoom = null;
-                RoomManager.LeaveRoom();
-                SceneManager.LoadScene("Login");
+                if (message.Tag == LoginSubjects.LogoutSuccess)
+                {
+                    RoomManager.CurrentRoom = null;
+                    RoomManager.LeaveRoom();
+                    SceneManager.LoadScene("Login");
+                }
             }
         }
     }

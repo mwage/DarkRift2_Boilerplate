@@ -50,283 +50,323 @@ namespace Friends
 
         public static void SendFriendRequest(string friendName)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(friendName);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(friendName);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Friends, FriendSubjects.FriendRequest, writer),
-                SendMode.Reliable);
+                using (var msg = Message.Create(FriendSubjects.FriendRequest, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void DeclineFriendRequest(string friendName)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(friendName);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(friendName);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Friends, FriendSubjects.DeclineRequest, writer),
-                SendMode.Reliable);
+                using (var msg = Message.Create(FriendSubjects.DeclineRequest, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void AcceptFriendRequest(string friendName)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(friendName);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(friendName);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Friends, FriendSubjects.AcceptRequest, writer),
-                SendMode.Reliable);
+                using (var msg = Message.Create(FriendSubjects.AcceptRequest, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void RemoveFriend(string friendName)
         {
-            var writer = new DarkRiftWriter();
-            writer.Write(friendName);
+            using (var writer = DarkRiftWriter.Create())
+            {
+                writer.Write(friendName);
 
-            GameControl.Client.SendMessage(new TagSubjectMessage(Tags.Friends, FriendSubjects.RemoveFriend, writer),
-                SendMode.Reliable);
+                using (var msg = Message.Create(FriendSubjects.RemoveFriend, writer))
+                {
+                    GameControl.Client.SendMessage(msg, SendMode.Reliable);
+                }
+            }
         }
 
         public static void GetAllFriends()
         {
-            GameControl.Client.SendMessage(new TagSubjectMessage(
-                Tags.Friends, FriendSubjects.GetAllFriends, new DarkRiftWriter()), SendMode.Reliable);
+            using (var msg = Message.CreateEmpty(FriendSubjects.GetAllFriends))
+            {
+                GameControl.Client.SendMessage(msg, SendMode.Reliable);
+            }
         }
 
         #endregion
 
         private static void OnDataHandler(object sender, MessageReceivedEventArgs e)
         {
-            var message = e.Message as TagSubjectMessage;
-
-            if (message == null || message.Tag != Tags.Friends)
-                return;
-
-            // New friend request
-            if (message.Subject == FriendSubjects.FriendRequest)
+            using (var message = e.GetMessage())
             {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                ChatManager.ServerMessage(friendName + " wants to add you as a friend!", MessageType.Info);
-
-                onNewFriendRequest?.Invoke(friendName);
-            }
-            // Successful friend request
-            else if (message.Subject == FriendSubjects.RequestSuccess)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                ChatManager.ServerMessage("Friend request sent.", MessageType.Info);
-
-                onSuccessfulFriendRequest?.Invoke(friendName);
-            }
-            // Friend request failed
-            else if (message.Subject == FriendSubjects.RequestFailed)
-            {
-                var content = "Failed to send friend request.";
-                var reader = message.GetReader();
-                if (reader.Length != 1)
+                // Check if message is meant for this plugin
+                if (message.Tag < Tags.TagsPerPlugin * Tags.Friends || message.Tag >= Tags.TagsPerPlugin * (Tags.Friends + 1))
+                    return;
+                
+                switch (message.Tag)
                 {
-                    Debug.LogWarning("Invalid RequestFailed Error data received.");
-                }
-                else
-                {
-                    switch (reader.ReadByte())
+                    // New friend request received
+                    case FriendSubjects.FriendRequest:
                     {
-                        case 0:
-                            Debug.Log("Invalid Friend Request data sent!");
-                            break;
-                        case 1:
-                            Debug.Log("Player not logged in!");
-                            SceneManager.LoadScene("Login");
-                            break;
-                        case 2:
-                            Debug.Log("Database Error");
-                            break;
-                        case 3:
-                            Debug.Log("No user with that name found!");
-                            content = "Username doesn't exist.";
-                            break;
-                        case 4:
-                            Debug.Log("Friend request failed. You are already friends or have an open request");
-                            content = "You are already friends or have an open request with this player.";
-                            break;
-                        default:
-                            Debug.Log("Invalid errorId!");
-                            break;
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        ChatManager.ServerMessage(friendName + " wants to add you as a friend!", MessageType.Info);
+
+                        onNewFriendRequest?.Invoke(friendName);
+                        break;
+                    }
+
+                    case FriendSubjects.RequestSuccess:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        ChatManager.ServerMessage("Friend request sent.", MessageType.Info);
+
+                        onSuccessfulFriendRequest?.Invoke(friendName);
+                        break;
+                    }
+
+                    case FriendSubjects.RequestFailed:
+                    {
+                        var content = "Failed to send friend request.";
+                        var reader = message.GetReader();
+                        if (reader.Length != 1)
+                        {
+                            Debug.LogWarning("Invalid RequestFailed Error data received.");
+                        }
+                        else
+                        {
+                            switch (reader.ReadByte())
+                            {
+                                case 0:
+                                    Debug.Log("Invalid Friend Request data sent!");
+                                    break;
+                                case 1:
+                                    Debug.Log("Player not logged in!");
+                                    SceneManager.LoadScene("Login");
+                                    break;
+                                case 2:
+                                    Debug.Log("Database Error");
+                                    break;
+                                case 3:
+                                    Debug.Log("No user with that name found!");
+                                    content = "Username doesn't exist.";
+                                    break;
+                                case 4:
+                                    Debug.Log("Friend request failed. You are already friends or have an open request");
+                                    content = "You are already friends or have an open request with this player.";
+                                    break;
+                                default:
+                                    Debug.Log("Invalid errorId!");
+                                    break;
+                            }
+                        }
+                        ChatManager.ServerMessage(content, MessageType.Error);
+                        break;
+                    }
+
+                    case FriendSubjects.DeclineRequestSuccess:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        var isSender = reader.ReadBoolean();
+                        var content = isSender
+                            ? "Declined " + friendName + "'s friend request."
+                            : friendName + " declined your friend request.";
+                        ChatManager.ServerMessage(content, MessageType.Error);
+
+                        onSuccessfulDeclineRequest?.Invoke(friendName);
+                        break;
+                    }
+
+                    case FriendSubjects.DeclineRequestFailed:
+                    {
+                        ChatManager.ServerMessage("Failed to decline request.", MessageType.Error);
+                        var reader = message.GetReader();
+                        if (reader.Length != 1)
+                        {
+                            Debug.LogWarning("Invalid DeclineRequestFailed Error data received.");
+                            return;
+                        }
+
+                        switch (reader.ReadByte())
+                        {
+                            case 0:
+                                Debug.Log("Invalid Decline Request data sent!");
+                                break;
+                            case 1:
+                                Debug.Log("Player not logged in!");
+                                SceneManager.LoadScene("Login");
+                                break;
+                            case 2:
+                                Debug.Log("Database Error");
+                                break;
+                            default:
+                                Debug.Log("Invalid errorId!");
+                                break;
+                        }
+                        break;
+                    }
+
+                    case FriendSubjects.AcceptRequestSuccess:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        var isSender = reader.ReadBoolean();
+                        ChatManager.ServerMessage("Added " + friendName + " to your friendlist.", MessageType.Info);
+
+                        onSuccessfulAcceptRequest?.Invoke(friendName, isSender);
+                        break;
+                    }
+
+                    case FriendSubjects.AcceptRequestFailed:
+                    {
+                        ChatManager.ServerMessage("Failed to accept request.", MessageType.Error);
+                        var reader = message.GetReader();
+                        if (reader.Length != 1)
+                        {
+                            Debug.LogWarning("Invalid DeclineRequestFailed Error data received.");
+                            return;
+                        }
+
+                        switch (reader.ReadByte())
+                        {
+                            case 0:
+                                Debug.Log("Invalid Accept Request data sent!");
+                                break;
+                            case 1:
+                                Debug.Log("Player not logged in!");
+                                SceneManager.LoadScene("Login");
+                                break;
+                            case 2:
+                                Debug.Log("Database Error");
+                                break;
+                            default:
+                                Debug.Log("Invalid errorId!");
+                                break;
+                        }
+                        break;
+                    }
+
+                    case FriendSubjects.RemoveFriendSuccess:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        var isSender = reader.ReadBoolean();
+                        var content = isSender
+                            ? "Removed " + friendName + " from your friendlist."
+                            : friendName + " removed you from his friendlist.";
+                        ChatManager.ServerMessage(content, MessageType.Error);
+
+                        onSuccessfulRemoveFriend?.Invoke(friendName);
+                        break;
+                    }
+
+                    case FriendSubjects.RemoveFriendFailed:
+                    {
+                        ChatManager.ServerMessage("Failed to remove friend.", MessageType.Error);
+                        var reader = message.GetReader();
+                        if (reader.Length != 1)
+                        {
+                            Debug.LogWarning("Invalid RemoveFriend Error data received.");
+                            return;
+                        }
+
+                        switch (reader.ReadByte())
+                        {
+                            case 0:
+                                Debug.Log("Invalid Remove Friend data sent!");
+                                break;
+                            case 1:
+                                Debug.Log("Player not logged in!");
+                                SceneManager.LoadScene("Login");
+                                break;
+                            case 2:
+                                Debug.Log("Database Error");
+                                break;
+                            default:
+                                Debug.Log("Invalid errorId!");
+                                break;
+                        }
+                        break;
+                    }
+
+                    case FriendSubjects.GetAllFriends:
+                    {
+                        var reader = message.GetReader();
+                        var onlineFriends = reader.ReadStrings();
+                        var offlineFriends = reader.ReadStrings();
+                        var openRequests = reader.ReadStrings();
+                        var unansweredRequests = reader.ReadStrings();
+                        foreach (var friend in onlineFriends)
+                        {
+                            ChatManager.ServerMessage(friend + " is online.", MessageType.Info);
+                        }
+                        onSuccessfulGetAllFriends?.Invoke(onlineFriends, offlineFriends, openRequests, unansweredRequests);
+                        break;
+                    }
+
+                    case FriendSubjects.GetAllFriendsFailed:
+                    {
+                        ChatManager.ServerMessage("Failed to load Friendlist!", MessageType.Error);
+                        var reader = message.GetReader();
+                        if (reader.Length != 1)
+                        {
+                            Debug.LogWarning("Invalid RemoveFriend Error data received.");
+                            return;
+                        }
+
+                        switch (reader.ReadByte())
+                        {
+                            case 1:
+                                Debug.Log("Player not logged in!");
+                                SceneManager.LoadScene("Login");
+                                break;
+                            case 2:
+                                Debug.Log("Database Error");
+                                break;
+                            default:
+                                Debug.Log("Invalid errorId!");
+                                break;
+                        }
+                        break;
+                    }
+
+                    case FriendSubjects.FriendLoggedIn:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        ChatManager.ServerMessage(friendName + " is online.", MessageType.Info);
+
+                        onFriendLogin?.Invoke(friendName);
+                        break;
+                    }
+
+                    case FriendSubjects.FriendLoggedOut:
+                    {
+                        var reader = message.GetReader();
+                        var friendName = reader.ReadString();
+                        ChatManager.ServerMessage(friendName + " is offline.", MessageType.Info);
+
+                        onFriendLogout?.Invoke(friendName);
+                        break;
                     }
                 }
-                ChatManager.ServerMessage(content, MessageType.Error);
-            }
-            // Request declined
-            else if (message.Subject == FriendSubjects.DeclineRequestSuccess)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                var isSender = reader.ReadBoolean();
-                var content = isSender ? "Declined " + friendName + "'s friend request." : friendName + " declined your friend request.";
-                ChatManager.ServerMessage(content, MessageType.Error);
-
-                onSuccessfulDeclineRequest?.Invoke(friendName);
-            }
-            // Request decline failed
-            else if (message.Subject == FriendSubjects.DeclineRequestFailed)
-            {
-                ChatManager.ServerMessage("Failed to decline request.", MessageType.Error);
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid DeclineRequestFailed Error data received.");
-                    return;
-                }
-
-                switch (reader.ReadByte())
-                {
-                    case 0:
-                        Debug.Log("Invalid Decline Request data sent!");
-                        break;
-                    case 1:
-                        Debug.Log("Player not logged in!");
-                        SceneManager.LoadScene("Login");
-                        break;
-                    case 2:
-                        Debug.Log("Database Error");
-                        break;
-                    default:
-                        Debug.Log("Invalid errorId!");
-                        break;
-                }
-            }
-            // Request accepted
-            else if (message.Subject == FriendSubjects.AcceptRequestSuccess)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                var isSender = reader.ReadBoolean();
-                ChatManager.ServerMessage("Added " + friendName + " to your friendlist.", MessageType.Info);
-
-                onSuccessfulAcceptRequest?.Invoke(friendName, isSender);
-            }
-            // Request accept failed
-            else if (message.Subject == FriendSubjects.AcceptRequestFailed)
-            {
-                ChatManager.ServerMessage("Failed to accept request.", MessageType.Error);
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid DeclineRequestFailed Error data received.");
-                    return;
-                }
-
-                switch (reader.ReadByte())
-                {
-                    case 0:
-                        Debug.Log("Invalid Accept Request data sent!");
-                        break;
-                    case 1:
-                        Debug.Log("Player not logged in!");
-                        SceneManager.LoadScene("Login");
-                        break;
-                    case 2:
-                        Debug.Log("Database Error");
-                        break;
-                    default:
-                        Debug.Log("Invalid errorId!");
-                        break;
-                }
-            }
-            // Successfully removed friend
-            else if (message.Subject == FriendSubjects.RemoveFriendSuccess)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                var isSender = reader.ReadBoolean();
-                var content = isSender ? "Removed " + friendName + " from your friendlist." : friendName + " removed you from his friendlist.";
-                ChatManager.ServerMessage(content, MessageType.Error);
-
-                onSuccessfulRemoveFriend?.Invoke(friendName);
-            }
-            // Remove friend failed
-            else if (message.Subject == FriendSubjects.RemoveFriendFailed)
-            {
-                ChatManager.ServerMessage("Failed to remove friend.", MessageType.Error);
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid RemoveFriend Error data received.");
-                    return;
-                }
-
-                switch (reader.ReadByte())
-                {
-                    case 0:
-                        Debug.Log("Invalid Remove Friend data sent!");
-                        break;
-                    case 1:
-                        Debug.Log("Player not logged in!");
-                        SceneManager.LoadScene("Login");
-                        break;
-                    case 2:
-                        Debug.Log("Database Error");
-                        break;
-                    default:
-                        Debug.Log("Invalid errorId!");
-                        break;
-                }
-            }
-            // Get all friends
-            else if (message.Subject == FriendSubjects.GetAllFriends)
-            {
-                var reader = message.GetReader();
-                var onlineFriends = reader.ReadStrings();
-                var offlineFriends = reader.ReadStrings();
-                var openRequests = reader.ReadStrings();
-                var unansweredRequests = reader.ReadStrings();
-                foreach (var friend in onlineFriends)
-                {
-                    ChatManager.ServerMessage(friend + " is online.", MessageType.Info);
-                }
-                onSuccessfulGetAllFriends?.Invoke(onlineFriends, offlineFriends, openRequests, unansweredRequests);
-            }
-            // Get all friends failed
-            else if (message.Subject == FriendSubjects.GetAllFriendsFailed)
-            {
-                ChatManager.ServerMessage("Failed to load Friendlist!", MessageType.Error);
-                var reader = message.GetReader();
-                if (reader.Length != 1)
-                {
-                    Debug.LogWarning("Invalid RemoveFriend Error data received.");
-                    return;
-                }
-
-                switch (reader.ReadByte())
-                {
-                    case 1:
-                        Debug.Log("Player not logged in!");
-                        SceneManager.LoadScene("Login");
-                        break;
-                    case 2:
-                        Debug.Log("Database Error");
-                        break;
-                    default:
-                        Debug.Log("Invalid errorId!");
-                        break;
-                }
-            }
-            // Friend logged in
-            else if (message.Subject == FriendSubjects.FriendLoggedIn)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                ChatManager.ServerMessage(friendName + " is online.", MessageType.Info);
-
-                onFriendLogin?.Invoke(friendName);
-            }
-            // Friend logged out
-            else if (message.Subject == FriendSubjects.FriendLoggedOut)
-            {
-                var reader = message.GetReader();
-                var friendName = reader.ReadString();
-                ChatManager.ServerMessage(friendName + " is offline.", MessageType.Info);
-
-                onFriendLogout?.Invoke(friendName);
             }
         }
     }

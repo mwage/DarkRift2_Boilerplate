@@ -1,9 +1,9 @@
-﻿using System;
-using System.IO;
-using System.Xml.Linq;
-using DarkRift;
+﻿using DarkRift;
 using DarkRift.Server;
 using MongoDB.Driver;
+using System;
+using System.IO;
+using System.Xml.Linq;
 
 namespace DbConnectorPlugin
 {

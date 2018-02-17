@@ -2,20 +2,22 @@
 {
     public class RoomSubjects
     {
-        public const ushort Create = 0;
-        public const ushort Join = 1;
-        public const ushort Leave = 2;
-        public const ushort GetOpenRooms = 3;
-        public const ushort GetOpenRoomsFailed = 4;
-        public const ushort CreateFailed = 5;
-        public const ushort CreateSuccess = 6;
-        public const ushort JoinFailed = 7;
-        public const ushort JoinSuccess = 8;
-        public const ushort PlayerJoined = 9;
-        public const ushort LeaveSuccess = 10;
-        public const ushort PlayerLeft = 11;
-        public const ushort StartGame = 12;
-        public const ushort StartGameSuccess = 13;
-        public const ushort StartGameFailed = 14;
+        private const ushort Shift = Tags.Room * Tags.TagsPerPlugin;
+
+        public const ushort Create = 0 + Shift;
+        public const ushort Join = 1 + Shift;
+        public const ushort Leave = 2 + Shift;
+        public const ushort GetOpenRooms = 3 + Shift;
+        public const ushort GetOpenRoomsFailed = 4 + Shift;
+        public const ushort CreateFailed = 5 + Shift;
+        public const ushort CreateSuccess = 6 + Shift;
+        public const ushort JoinFailed = 7 + Shift;
+        public const ushort JoinSuccess = 8 + Shift;
+        public const ushort PlayerJoined = 9 + Shift;
+        public const ushort LeaveSuccess = 10 + Shift;
+        public const ushort PlayerLeft = 11 + Shift;
+        public const ushort StartGame = 12 + Shift;
+        public const ushort StartGameSuccess = 13 + Shift;
+        public const ushort StartGameFailed = 14 + Shift;
     }
 }
