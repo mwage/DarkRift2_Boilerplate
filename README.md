@@ -1,21 +1,21 @@
 # DarkRift2_Boilerplate
 
-Boilerplate for new Darkrift projects. Free to use, copy and change to suit your needs.
+This project is meant to give people an idea of how DarkRift 2 works. Feel free for use and change to suit your needs.
 
-I'm using MongoDB for this project, but adapting things to a different database shouldn't be all that difficult, just write a Db Connector for it and modify the queries. For Authentication I'm using RSA and BCrypt. For an actual live project, unless you really know what you do, you might want to use token based authorization like f.e. OAuth/OpenID or 3rd party platforms like PlayFab, so you don't have to deal with sensible user data yourself. I take no responsibility for any security issues, this project isn't meant to copy/paste but rather to provide an idea of how you can work with DarkRift 2. 
+I'm using MongoDB for this project, but adapting things to a different database shouldn't be all that difficult, just write a Db Connector for it and modify the queries. For Authentication I'm using RSA and BCrypt. For an actual live project, unless you really know what you do, you might want to use token based authorization like f.e. OAuth/OpenID or 3rd party platforms like PlayFab, so you don't have to deal with sensible user data yourself. I take no responsibility for any security issues, this project isn't meant as copy/paste solution, but rather to provide an idea of how you can work with DarkRift 2. 
 
 Type /join (name) or /leave (name) to join/leave a chatgroup and use tab/enter/esc to navigate in the chat window.
 
 Example: https://www.youtube.com/watch?v=IvHqSiPhJiM
 
-### Update: Now updated to DarkRift 2, Beta r8, which should be almost identical to the upcoming release version
+### Update: Now updated to the official release version of DarkRift 2
 
 ### Instructions:
 
 1) Clone/Download the project.
 2) Open the Unity folder with Unity.
-3) Import the Darkrift 2 package.
-4) Extract the "DarkRift Server.zip" that got added to the Assets/DarkRift folder to a location outside the Unity project.
+3) Download Darkrift 2 from the Asset Store.
+4) Extract the "DarkRift Server.zip" that got added with the Assets/DarkRift folder to a location outside of the Unity project.
 5) Inside the "DarkRift Server" folder, create a new folder called "Plugins".
 6) Open and run the Plugins/GenerateRsaKeys solution. This creates PrivateKey.xml and PublicKey.xml.
 7) Copy PrivateKey.xml into DarkRift Server/Plugins and PublicKey.xml into the Assets/Resources folder in the Unity project (might have to create the folder).
