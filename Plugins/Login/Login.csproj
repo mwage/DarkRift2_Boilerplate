@@ -35,11 +35,11 @@
     </Reference>
     <Reference Include="DarkRift, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.dll</HintPath>
     </Reference>
     <Reference Include="DarkRift.Server, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.Server.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.Server.dll</HintPath>
     </Reference>
     <Reference Include="DbConnector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -32,15 +32,11 @@
   <ItemGroup>
     <Reference Include="DarkRift, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.dll</HintPath>
     </Reference>
     <Reference Include="DarkRift.Server, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.Server.dll</HintPath>
-    </Reference>
-    <Reference Include="Rooms, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Rooms\bin\Debug\Rooms.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.Server.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -60,6 +56,10 @@
     <ProjectReference Include="..\Login\Login.csproj">
       <Project>{c46ea14e-d389-43f4-b781-954c91727df7}</Project>
       <Name>Login</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rooms\Rooms.csproj">
+      <Project>{b6ce1675-74fa-4ff1-b62a-0ba188999353}</Project>
+      <Name>Rooms</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

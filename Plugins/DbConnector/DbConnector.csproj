@@ -32,11 +32,11 @@
   <ItemGroup>
     <Reference Include="DarkRift, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.dll</HintPath>
     </Reference>
     <Reference Include="DarkRift.Server, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\DarkRift Server r8\Lib\DarkRift.Server.dll</HintPath>
+      <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.Server.dll</HintPath>
     </Reference>
     <Reference Include="MongoDB.Bson, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MongoDB.Bson.2.4.4\lib\net45\MongoDB.Bson.dll</HintPath>
