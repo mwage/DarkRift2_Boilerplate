@@ -19,15 +19,18 @@ Example: https://www.youtube.com/watch?v=IvHqSiPhJiM
 5) Inside the "DarkRift Server" folder, create a new folder called "Plugins".
 6) Open and run the Plugins/GenerateRsaKeys solution. This creates PrivateKey.xml and PublicKey.xml.
 7) Copy PrivateKey.xml into DarkRift Server/Plugins and PublicKey.xml into the Assets/Resources folder in the Unity project (might have to create the folder).
-8) Open the Plugins/Plugins.sln solution.
-9) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib to all 4 projects.
-10) Try building the solution. Usually the Nuget Manager should be able to install the Nuget packages by itself. If everything builds fine, jump to 13), otherwise continue with 11).
-11) Install the MongoDB driver package with the NuGet package manager into Login and DBConnector projects.
-12) You might have to install the BCrypt-Official Nuget package for the Login Project and build the solution.
-13) Copy DbConnector.dll, Login.dll, Chat.dll and Rooms.dll into DarkRiftServer/Plugins and the 3 Mongo, the System.Runtime and the BCrypt dll into DarkRiftServer/lib. You can find all of them in the Debug/bin folder of the Chat project.
+8) In unity, open the "Launcher" scene, select the GameManager object and if one of the scripts is corrupted, replace it with "[YourDarkRiftFolder]\DarkRift\Plugins\Client\UnityClient.cs". You'll have to do this if your DarkRift version is more recent than the one used here.
+9) Open the Plugins/Plugins.sln solution.
+10) Add the DarkRift and DarkRift.Server references from DarkRiftServer/Lib to all 4 projects.
+11) Try building the solution. Usually the Nuget Manager should be able to install the Nuget packages by itself. If everything builds fine, jump to 14), otherwise continue with 12).
+12) Install the MongoDB driver package with the NuGet package manager into Login and DBConnector projects.
+13) You might have to install the BCrypt-Official Nuget package for the Login Project and build the solution.
+14) Copy DbConnector.dll, Login.dll, Chat.dll and Rooms.dll into DarkRiftServer/Plugins and the 3 Mongo, the System.Runtime and the BCrypt dll into DarkRiftServer/lib. You can find all of them in the Debug/bin folder of the Chat project.
 
 You should be able to run the server without errors now. 
 Ignore the warning, it just reminds you that the connection path is set to default ("mongodb://localhost:27017").
+
+
 
 With that the setup should complete. Install MongoDB if you don't have it and run mongod.exe.
 Run the DarkRift.Server.Console.exe and run the Launcher in your Unity scene.
