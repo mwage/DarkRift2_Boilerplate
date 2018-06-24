@@ -41,10 +41,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Boilerplate Server\Lib\DarkRift.Server.dll</HintPath>
     </Reference>
-    <Reference Include="DbConnector, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\DbConnector\bin\Debug\DbConnector.dll</HintPath>
-    </Reference>
     <Reference Include="MongoDB.Bson, Version=2.4.4.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MongoDB.Bson.2.4.4\lib\net45\MongoDB.Bson.dll</HintPath>
     </Reference>
@@ -77,6 +73,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DbConnector\DbConnector.csproj">
+      <Project>{b71dba54-d129-4744-b838-7c045b4a87c3}</Project>
+      <Name>DbConnector</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
