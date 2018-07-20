@@ -18,8 +18,8 @@ namespace MongoDbConnector
             Username = user.Username;
             Password = user.Password;
             Friends = user.Friends;
-            OpenFriendRequests = user.Friends;
-            UnansweredFriendRequests = user.Friends;
+            OpenFriendRequests = user.OpenFriendRequests;
+            UnansweredFriendRequests = user.UnansweredFriendRequests;
         }
     }
 }
