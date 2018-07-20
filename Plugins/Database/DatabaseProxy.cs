@@ -17,14 +17,21 @@ namespace Database
 
         public void SetDatabase(IDataLayer dataLayer)
         {
+            if (DataLayer == dataLayer)
+            {
+                WriteEvent($"Database: {dataLayer.Name} is already selected", LogType.Info);
+            }
+
             if (DataLayer != null)
             {
-                WriteEvent($"Database Error: Database {dataLayer.Name} is already active.", LogType.Error);
-                return;
+                WriteEvent($"Switching from Database: {DataLayer.Name} to Database: {dataLayer.Name}", LogType.Warning);
+            }
+            else
+            {
+                WriteEvent("Selected Database: " + dataLayer.Name, LogType.Info);
             }
 
             DataLayer = dataLayer;
-            WriteEvent("Added Database: " + dataLayer.Name, LogType.Info);
         }
 
         #region ErrorHandling

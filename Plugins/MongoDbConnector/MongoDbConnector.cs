@@ -10,24 +10,26 @@ namespace MongoDbConnector
 {
     public class MongoDbConnector : Plugin
     {
-        public override Version Version => new Version(1, 0, 0);
+        public override Version Version => new Version(2, 0, 0);
         public override bool ThreadSafe => false;
         public override Command[] Commands => new[]
         {
             new Command ("LoadMongo", "Loads Mongo Db Database", "", LoadDbCommand),
         };
 
-        public IMongoCollection<User> Users { get; private set; }
-
         private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
-        private readonly IMongoDatabase _mongoDatabase;
         private DatabaseProxy _database;
+        private readonly DataLayer _dataLayer;
 
+        public IMongoCollection<User> Users { get; private set; }
+        private readonly IMongoDatabase _mongoDatabase;
 
         public MongoDbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
+            //Read Connectionstring from Config
             var connectionString = LoadConfig();
 
+            //Set up MongoDB
             try
             {
                 var client = new MongoClient(connectionString);
@@ -38,11 +40,14 @@ namespace MongoDbConnector
             {
                 WriteEvent("Failed to connect to MongoDb: " + ex.Message + " - " + ex.StackTrace, LogType.Fatal);
             }
+            
+            //GetDataLayer
+            _dataLayer = new DataLayer("MongoDB", this);
 
             ClientManager.ClientConnected += OnPlayerConnected;
         }
 
-        // Get Connection String
+        //Get Connection String
         private string LoadConfig()
         {
             XDocument document;
@@ -56,7 +61,7 @@ namespace MongoDbConnector
                 {
                     document.Save(ConfigPath);
                     WriteEvent("Created /Plugins/DbConnector.xml. Please adjust your connection string and restart the server!",
-                        LogType.Warning);
+                        LogType.Info);
                     return "mongodb://localhost:27017";
                 }
                 catch (Exception ex)
@@ -80,33 +85,36 @@ namespace MongoDbConnector
             }
         }
 
+        //Set up MongoDB Schemas
         private void GetCollections()
         {
             Users = _mongoDatabase.GetCollection<User>("users");
         }
 
+        //If you have DR2 Pro, use the Plugin.Loaded() method instead of this
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
-            LoadDatabase();
+            //Register the database at initial startup
+            if (_database == null)
+            {
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                LoadDatabase();
+            }
         }
 
+        //Register database
         private void LoadDatabase()
+        {
+            _database.SetDatabase(_dataLayer);
+        }
+
+        //Command for setting MongoDB as active database
+        public void LoadDbCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
                 _database = PluginManager.GetPluginByType<DatabaseProxy>();
-                _database.SetDatabase(new DataLayer("MongoDB", this));
             }
-        }
-
-        public void Log(string message, LogType logType)
-        {
-            WriteEvent(message, logType);
-        }
-
-        public void LoadDbCommand(object sender, CommandEventArgs e)
-        {
             LoadDatabase();
         }
     }

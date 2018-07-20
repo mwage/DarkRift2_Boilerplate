@@ -65,7 +65,7 @@ namespace RoomSystemPlugin
                 try
                 {
                     document.Save(ConfigPath);
-                    WriteEvent("Created /Plugins/RoomSystem.xml!", LogType.Warning);
+                    WriteEvent("Created /Plugins/RoomSystem.xml!", LogType.Info);
                 }
                 catch (Exception ex)
                 {

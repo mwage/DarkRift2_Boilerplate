@@ -75,7 +75,7 @@ namespace LoginPlugin
                 try
                 {
                     document.Save(ConfigPath);
-                    WriteEvent("Created /Plugins/Login.xml!", LogType.Warning);
+                    WriteEvent("Created /Plugins/Login.xml!", LogType.Info);
                 }
                 catch (Exception ex)
                 {

@@ -23,7 +23,6 @@ namespace MongoDbConnector
         {
             //Gets user data from the database and builds a User object to send back
             var user = _database.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
-            _database.Log($"{user?.Username}: {user?.Friends.Count} - {user?.OpenFriendRequests.Count} - {user?.UnansweredFriendRequests.Count}", LogType.Warning);
             return user != null ? new UserDto(user) : null;
         }
 

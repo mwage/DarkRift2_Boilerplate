@@ -64,7 +64,7 @@ namespace ChatPlugin
                 try
                 {
                     document.Save(ConfigPath);
-                    WriteEvent("Created /Plugins/Chat.xml!", LogType.Warning);
+                    WriteEvent("Created /Plugins/Chat.xml!", LogType.Info);
                 }
                 catch (Exception ex)
                 {
