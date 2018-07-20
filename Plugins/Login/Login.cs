@@ -1,12 +1,10 @@
 ﻿using DarkRift;
 using DarkRift.Server;
-using DbConnectorPlugin;
-using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Xml.Linq;
+using Database;
 
 namespace LoginPlugin
 {
@@ -23,7 +21,7 @@ namespace LoginPlugin
             new Command("LoggedIn", "Logs number of online users", "", UsersLoggedInCommand),
             new Command("Online", "Logs number of online users", "", UsersOnlineCommand)
         };
-
+       
         // Maximum number of Tags per Plugin
         public const ushort TagsPerPlugin = 256;
 
@@ -47,7 +45,7 @@ namespace LoginPlugin
 
         private const string ConfigPath = @"Plugins\Login.xml";
         private const string PrivateKeyPath = @"Plugins\PrivateKey.xml";
-        private DbConnector _dbConnector;
+        private DatabaseProxy _database;
         private string _privateKey;
         private bool _allowAddUser = true;
         private bool _debug = true;
@@ -114,9 +112,9 @@ namespace LoginPlugin
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
             // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
             }
 
             UsersLoggedIn[e.Client] = null;
@@ -198,7 +196,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = _dbConnector.Users.AsQueryable().FirstOrDefault(u => u.Username == username);
+                            var user = _database.DataLayer.GetUser(username);
 
                             if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                             {
@@ -237,7 +235,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, LoginFailed, ex);
+                            _database.DatabaseError(client, LoginFailed, ex);
                         }
                         break;
                     }
@@ -294,9 +292,14 @@ namespace LoginPlugin
 
                         try
                         {
-                            if (UsernameAvailable(username))
+                            if (_database.DataLayer.UsernameAvailable(username))
                             {
-                                AddNewUser(username, password);
+                                _database.DataLayer.AddNewUser(username, password);
+
+                                if (_debug)
+                                {
+                                    WriteEvent("New User: " + username, LogType.Info);
+                                }
 
                                 using (var msg = Message.CreateEmpty(AddUserSuccess))
                                 {
@@ -325,27 +328,12 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, AddUserFailed, ex);
+                            _database.DatabaseError(client, AddUserFailed, ex);
                         }
                         break;
                     }
                 }
             }       
-        }
-
-        private bool UsernameAvailable(string username)
-        {
-            return !_dbConnector.Users.AsQueryable().Any(u => u.Username == username);
-        }
-
-        private void AddNewUser(string username, string password)
-        {
-            _dbConnector.Users.InsertOne(new User(username, password));
-
-            if (_debug)
-            {
-                WriteEvent("New User: " + username, LogType.Info);
-            }
         }
 
         #region Commands
@@ -368,9 +356,9 @@ namespace LoginPlugin
 
         private void AddUserCommand(object sender, CommandEventArgs e)
         {
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
             }
 
             if (e.Arguments.Length != 2)
@@ -384,9 +372,14 @@ namespace LoginPlugin
 
             try
             {
-                if (UsernameAvailable(username))
+                if (_database.DataLayer.UsernameAvailable(username))
                 {
-                    AddNewUser(username, password);
+                    _database.DataLayer.AddNewUser(username, password);
+
+                    if (_debug)
+                    {
+                        WriteEvent("New User: " + username, LogType.Info);
+                    }
                 }
                 else
                 {
@@ -401,16 +394,16 @@ namespace LoginPlugin
 
         private void DelUserCommand(object sender, CommandEventArgs e)
         {
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
             }
 
             var username = e.Arguments[0];
 
             try
             {
-                _dbConnector.Users.DeleteOne(u => u.Username == username);
+                _database.DataLayer.DeleteUser(username);
 
                 if (_debug)
                 {

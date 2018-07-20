@@ -7,8 +7,8 @@
     <ProjectGuid>{B71DBA54-D129-4744-B838-7C045B4A87C3}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DbConnectorPlugin</RootNamespace>
-    <AssemblyName>DbConnector</AssemblyName>
+    <RootNamespace>MongoDbConnector</RootNamespace>
+    <AssemblyName>MongoDbConnector</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -60,12 +60,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DbConnector.cs" />
+    <Compile Include="DataLayer.cs" />
+    <Compile Include="MongoDbConnector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UserDto.cs" />
     <Compile Include="User.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Database\Database.csproj">
+      <Project>{4fdd81d8-0c7c-422a-a853-9491a43a0bce}</Project>
+      <Name>Database</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

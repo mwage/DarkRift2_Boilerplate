@@ -1,36 +1,45 @@
 ﻿using DarkRift;
 using DarkRift.Server;
+using Database;
 using MongoDB.Driver;
 using System;
 using System.IO;
 using System.Xml.Linq;
 
-namespace DbConnectorPlugin
+namespace MongoDbConnector
 {
-    public class DbConnector : Plugin
+    public class MongoDbConnector : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
         public override bool ThreadSafe => false;
+        public override Command[] Commands => new[]
+        {
+            new Command ("LoadMongo", "Loads Mongo Db Database", "", LoadDbCommand),
+        };
 
         public IMongoCollection<User> Users { get; private set; }
 
-        private const string ConfigPath = @"Plugins\DbConnector.xml";
-        private readonly IMongoDatabase _database;
+        private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
+        private readonly IMongoDatabase _mongoDatabase;
+        private DatabaseProxy _database;
 
-        public DbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
+
+        public MongoDbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
             var connectionString = LoadConfig();
 
             try
             {
                 var client = new MongoClient(connectionString);
-                _database = client.GetDatabase("test");
+                _mongoDatabase = client.GetDatabase("test");
                 GetCollections();
             }
             catch (Exception ex)
             {
-                WriteEvent("Failed to set up Database:" + ex.Message + " - " + ex.StackTrace, LogType.Fatal);
+                WriteEvent("Failed to connect to MongoDb: " + ex.Message + " - " + ex.StackTrace, LogType.Fatal);
             }
+
+            ClientManager.ClientConnected += OnPlayerConnected;
         }
 
         // Get Connection String
@@ -73,26 +82,32 @@ namespace DbConnectorPlugin
 
         private void GetCollections()
         {
-            Users = _database.GetCollection<User>("users");
+            Users = _mongoDatabase.GetCollection<User>("users");
         }
 
-        #region ErrorHandling
-
-        public void DatabaseError(IClient client, ushort tag, Exception e)
+        private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            WriteEvent("Database Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
+            // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
+            LoadDatabase();
+        }
 
-            using (var writer = DarkRiftWriter.Create())
+        private void LoadDatabase()
+        {
+            if (_database == null)
             {
-                writer.Write((byte)2);
-
-                using (var msg = Message.Create(tag, writer))
-                {
-                    client.SendMessage(msg, SendMode.Reliable);
-                }
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                _database.SetDatabase(new DataLayer("MongoDB", this));
             }
         }
 
-        #endregion
+        public void Log(string message, LogType logType)
+        {
+            WriteEvent(message, logType);
+        }
+
+        public void LoadDbCommand(object sender, CommandEventArgs e)
+        {
+            LoadDatabase();
+        }
     }
 }

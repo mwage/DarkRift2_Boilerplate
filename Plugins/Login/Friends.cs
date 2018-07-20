@@ -1,12 +1,11 @@
 ﻿using DarkRift;
 using DarkRift.Server;
-using DbConnectorPlugin;
-using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using Database;
 
 namespace LoginPlugin
 {
@@ -44,7 +43,7 @@ namespace LoginPlugin
         private const ushort FriendLoggedOut = 15 + Shift;
 
         private const string ConfigPath = @"Plugins\Friends.xml";
-        private DbConnector _dbConnector;
+        private DatabaseProxy _database;
         private Login _loginPlugin;
         private bool _debug = true;
 
@@ -91,9 +90,9 @@ namespace LoginPlugin
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
             // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
                 _loginPlugin = PluginManager.GetPluginByType<Login>();
 
                 _loginPlugin.onLogout += LogoutFriend;
@@ -139,8 +138,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var receiverUser = _dbConnector.Users.AsQueryable()
-                                .FirstOrDefault(u => u.Username == receiver);
+                            var receiverUser = _database.DataLayer.GetUser(receiver);
                             if (receiverUser == null)
                             {
                                 // No user with that name found -> return error 3
@@ -184,7 +182,7 @@ namespace LoginPlugin
                             }
 
                             // Save the request in the database to both users
-                            AddRequests(senderName, receiver);
+                            _database.DataLayer.AddRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -220,7 +218,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, RequestFailed, ex);
+                            _database.DatabaseError(client, RequestFailed, ex);
                         }
                         break;
                     }
@@ -251,7 +249,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users
-                            RemoveRequests(senderName, receiver);
+                            _database.DataLayer.RemoveRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -289,7 +287,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, DeclineRequestFailed, ex);
+                            _database.DatabaseError(client, DeclineRequestFailed, ex);
                         }
                         break;
                     }
@@ -320,8 +318,8 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users and add their names to their friend list
-                            RemoveRequests(senderName, receiver);
-                            AddFriends(senderName, receiver);
+                            _database.DataLayer.RemoveRequest(senderName, receiver);
+                            _database.DataLayer.AddFriend(senderName, receiver);
 
                             var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
 
@@ -361,7 +359,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, AcceptRequestFailed, ex);
+                            _database.DatabaseError(client, AcceptRequestFailed, ex);
                         }
                         break;
                     }
@@ -392,7 +390,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the names from the friendlist in the database for both users
-                            RemoveFriends(senderName, receiver);
+                            _database.DataLayer.RemoveFriend(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -430,7 +428,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, RemoveFriendFailed, ex);
+                            _database.DatabaseError(client, RemoveFriendFailed, ex);
                         }
                         break;
                     }
@@ -445,7 +443,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = _dbConnector.Users.AsQueryable().First(u => u.Username == senderName);
+                            var user = _database.DataLayer.GetUser(senderName);
                             var onlineFriends = new List<string>();
                             var offlineFriends = new List<string>();
 
@@ -495,7 +493,7 @@ namespace LoginPlugin
                         catch (Exception ex)
                         {
                             // Return Error 2 for Database error
-                            _dbConnector.DatabaseError(client, GetAllFriendsFailed, ex);
+                            _database.DatabaseError(client, GetAllFriendsFailed, ex);
                         }
                         break;
                     }
@@ -505,7 +503,7 @@ namespace LoginPlugin
 
         public void LogoutFriend(string username)
         {
-            var friends = _dbConnector.Users.AsQueryable().First(u => u.Username == username).Friends;
+            var friends = _database.DataLayer.GetUser(username).Friends;
 
             using (var writer = DarkRiftWriter.Create())
             {
@@ -527,81 +525,13 @@ namespace LoginPlugin
             }
         }
 
-        #region DbHelpers
-
-        private void AddRequests(string sender, string receiver)
-        {
-            var updateReceiving = Builders<User>.Update.AddToSet(u => u.OpenFriendRequests, sender);
-            _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiving);
-            var updateSender = Builders<User>.Update.AddToSet(u => u.UnansweredFriendRequests, receiver);
-            _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSender);
-        }
-
-        private void RemoveRequests(string sender, string receiver)
-        {
-            var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-            _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSender);
-            var updateReceiving = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-            _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiving);
-        }
-
-        private void AddFriends(string sender, string receiver)
-        {
-            var updateReceiving = Builders<User>.Update.AddToSet(u => u.Friends, sender);
-            _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiving);
-            var updateSending = Builders<User>.Update.AddToSet(u => u.Friends, receiver);
-            _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSending);
-        }
-
-        private void RemoveFriends(string sender, string receiver)
-        {
-            var senderUser = _dbConnector.Users.AsQueryable().First(u => u.Username == sender);
-            var receiverUser = _dbConnector.Users.AsQueryable().First(u => u.Username == receiver);
-
-            // Update sender
-            if (senderUser.Friends.Contains(receiver))
-            {
-                var updateSender = Builders<User>.Update.Pull(u => u.Friends, receiver);
-                _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSender);
-            }
-            if (senderUser.OpenFriendRequests.Contains(receiver))
-            {
-                var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-                _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSender);
-            }
-            if (senderUser.UnansweredFriendRequests.Contains(receiver))
-            {
-                var updateSender = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, receiver);
-                _dbConnector.Users.UpdateOne(u => u.Username == sender, updateSender);
-            }
-
-            //Update receiver
-            if (receiverUser.Friends.Contains(sender))
-            {
-                var updateReceiver = Builders<User>.Update.Pull(u => u.Friends, sender);
-                _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiver);
-            }
-            if (receiverUser.OpenFriendRequests.Contains(sender))
-            {
-                var updateReceiver = Builders<User>.Update.Pull(u => u.OpenFriendRequests, sender);
-                _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiver);
-            }
-            if (receiverUser.UnansweredFriendRequests.Contains(sender))
-            {
-                var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-                _dbConnector.Users.UpdateOne(u => u.Username == receiver, updateReceiver);
-            }
-        }
-
-        #endregion
-
         #region Commands
 
         private void AddFriendCommand(object sender, CommandEventArgs e)
         {
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
             }
 
             if (e.Arguments.Length != 2)
@@ -615,7 +545,7 @@ namespace LoginPlugin
 
             try
             {
-                AddFriends(username, friend);
+                _database.DataLayer.AddFriend(username, friend);
 
                 if (_debug)
                 {
@@ -630,9 +560,9 @@ namespace LoginPlugin
 
         private void DelFriendCommand(object sender, CommandEventArgs e)
         {
-            if (_dbConnector == null)
+            if (_database == null)
             {
-                _dbConnector = PluginManager.GetPluginByType<DbConnector>();
+                _database = PluginManager.GetPluginByType<DatabaseProxy>();
             }
 
             if (e.Arguments.Length != 2)
@@ -646,7 +576,7 @@ namespace LoginPlugin
 
             try
             {
-                RemoveFriends(username, friend);
+                _database.DataLayer.RemoveFriend(username, friend);
 
                 if (_debug)
                 {
