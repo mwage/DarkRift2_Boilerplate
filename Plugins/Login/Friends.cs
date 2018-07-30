@@ -142,7 +142,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var receiverUser = _database.DataLayer.GetUser(receiver).Result;
+                            var receiverUser = await _database.DataLayer.GetUser(receiver);
                             if (receiverUser == null)
                             {
                                 // No user with that name found -> return error 3
@@ -443,7 +443,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = _database.DataLayer.GetUser(senderName).Result;
+                            var user = await _database.DataLayer.GetUser(senderName);
                             var onlineFriends = new List<string>();
                             var offlineFriends = new List<string>();
 
@@ -499,11 +499,11 @@ namespace LoginPlugin
             }
         }
 
-        public void LogoutFriend(string username)
+        public async void LogoutFriend(string username)
         {
             try
             {
-                var friends = _database.DataLayer.GetUser(username).Result.Friends;
+                var friends = (await _database.DataLayer.GetUser(username)).Friends;
 
                 using (var writer = DarkRiftWriter.Create())
                 {

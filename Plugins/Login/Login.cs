@@ -202,7 +202,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = _database.DataLayer.GetUser(username).Result;
+                            var user = await _database.DataLayer.GetUser(username);
 
                             if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                             {
@@ -297,7 +297,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            if (_database.DataLayer.UsernameAvailable(username).Result)
+                            if (await _database.DataLayer.UsernameAvailable(username))
                             {
                                 await _database.DataLayer.AddNewUser(username, password);
 
@@ -377,7 +377,7 @@ namespace LoginPlugin
 
             try
             {
-                if (_database.DataLayer.UsernameAvailable(username).Result)
+                if (await _database.DataLayer.UsernameAvailable(username))
                 {
                     await _database.DataLayer.AddNewUser(username, password);
 
