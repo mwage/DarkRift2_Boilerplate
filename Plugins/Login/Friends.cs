@@ -501,23 +501,30 @@ namespace LoginPlugin
 
         public void LogoutFriend(string username)
         {
-            var friends = _database.DataLayer.GetUser(username).Result.Friends;
-
-            using (var writer = DarkRiftWriter.Create())
+            try
             {
-                writer.Write(username);
+                var friends = _database.DataLayer.GetUser(username).Result.Friends;
 
-                foreach (var friend in friends)
-                    if (_loginPlugin.Clients.ContainsKey(friend))
-                    {
-                        // let online friends know he logged out
-                        var client = _loginPlugin.Clients[friend];
+                using (var writer = DarkRiftWriter.Create())
+                {
+                    writer.Write(username);
 
-                        using (var msg = Message.Create(FriendLoggedOut, writer))
+                    foreach (var friend in friends)
+                        if (_loginPlugin.Clients.ContainsKey(friend))
                         {
-                            client.SendMessage(msg, SendMode.Reliable);
+                            // let online friends know he logged out
+                            var client = _loginPlugin.Clients[friend];
+
+                            using (var msg = Message.Create(FriendLoggedOut, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
                         }
-                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteEvent($"Database Error. Failed to notify friends of Logout! \n\n{ex.Message}\n{ex.StackTrace}", LogType.Error);
             }
         }
 

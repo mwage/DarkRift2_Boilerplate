@@ -96,11 +96,21 @@ namespace MongoDbConnector
         //If you have DR2 Pro, use the Plugin.Loaded() method instead of this
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            LoadDatabase();
+            if (_database == null)
+            {
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        _database.SetDatabase(_dataLayer);
+                    }
+                }
+            }
         }
 
-        //Register database
-        private void LoadDatabase()
+        //Command for setting MongoDB as active database
+        public void LoadDbCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -109,16 +119,11 @@ namespace MongoDbConnector
                     if (_database == null)
                     {
                         _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        
                     }
                 }
             }
             _database.SetDatabase(_dataLayer);
-        }
-
-        //Command for setting MongoDB as active database
-        public void LoadDbCommand(object sender, CommandEventArgs e)
-        {
-            LoadDatabase();
         }
     }
 }
