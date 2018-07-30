@@ -1,24 +1,27 @@
-﻿using DarkRift;
-using DarkRift.Server;
-using LoginPlugin;
-using RoomSystemPlugin;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using DarkRift;
+using DarkRift.Server;
+using LoginPlugin;
+using RoomSystemPlugin;
 
 namespace ChatPlugin
 {
     public class Chat : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
-
+        public override bool ThreadSafe => true;
         public override Command[] Commands => new[]
         {
             new Command("groups", "Shows all chatgroups [groups username(optional]", "", GetChatGroupsCommand)
         };
+
+        public ConcurrentDictionary<string, ChatGroup> ChatGroups { get; } = new ConcurrentDictionary<string, ChatGroup>();
+        public ConcurrentDictionary<string, List<ChatGroup>> ChatGroupsOfPlayer { get; } = new ConcurrentDictionary<string, List<ChatGroup>>();
 
         // Tag
         private const byte ChatTag = 3;
@@ -38,12 +41,10 @@ namespace ChatPlugin
         private const ushort GetActiveGroupsFailed = 10 + Shift;
 
         private const string ConfigPath = @"Plugins\Chat.xml";
+        private static readonly object InitializeLock = new object();
+        private bool _debug = true;
         private Login _loginPlugin;
         private RoomSystem _roomSystem;
-        private bool _debug = true;
-
-        public Dictionary<string, ChatGroup> ChatGroups = new Dictionary<string, ChatGroup>();
-        public Dictionary<string, List<ChatGroup>> ChatGroupsOfPlayer = new Dictionary<string, List<ChatGroup>>();
 
         public Chat(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -87,13 +88,19 @@ namespace ChatPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method instead
+            // If you have DR2 Pro, use the Loaded() method instead and spare yourself the locks
             if (_loginPlugin == null)
             {
-                _loginPlugin = PluginManager.GetPluginByType<Login>();
-                _roomSystem = PluginManager.GetPluginByType<RoomSystem>();
-                _loginPlugin.onLogout += RemovePlayerFromChatGroups;
-                ChatGroups["General"] = new ChatGroup("General");
+                lock (InitializeLock)
+                {
+                    if (_loginPlugin == null)
+                    {
+                        _loginPlugin = PluginManager.GetPluginByType<Login>();
+                        _roomSystem = PluginManager.GetPluginByType<RoomSystem>();
+                        _loginPlugin.onLogout += RemovePlayerFromChatGroups;
+                        ChatGroups["General"] = new ChatGroup("General");
+                    }
+                }
             }
 
             e.Client.MessageReceived += OnMessageReceived;
@@ -105,7 +112,9 @@ namespace ChatPlugin
             {
                 // Check if message is meant for this plugin
                 if (message.Tag < Login.TagsPerPlugin * ChatTag || message.Tag >= Login.TagsPerPlugin * (ChatTag + 1))
+                {
                     return;
+                }
 
                 var client = e.Client;
 
@@ -115,8 +124,7 @@ namespace ChatPlugin
                     case PrivateMessage:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Private Message failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Private Message failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -158,7 +166,7 @@ namespace ChatPlugin
                         }
 
                         var receivingClient = _loginPlugin.Clients[receiver];
-                        
+
                         // Let sender know message got transmitted
                         using (var writer = DarkRiftWriter.Create())
                         {
@@ -189,8 +197,7 @@ namespace ChatPlugin
                     case RoomMessage:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Group/Room Message failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Group/Room Message failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         ushort roomId;
@@ -216,7 +223,7 @@ namespace ChatPlugin
                             // If player isn't actually in the room -> return error 2
                             using (var writer = DarkRiftWriter.Create())
                             {
-                                writer.Write((byte)2);
+                                writer.Write((byte) 2);
 
                                 using (var msg = Message.Create(MessageFailed, writer))
                                 {
@@ -236,9 +243,7 @@ namespace ChatPlugin
                             using (var msg = Message.Create(RoomMessage, writer))
                             {
                                 foreach (var cl in _roomSystem.RoomList[roomId].Clients)
-                                {
                                     cl.SendMessage(msg, SendMode.Reliable);
-                                }
                             }
                         }
                         break;
@@ -247,8 +252,7 @@ namespace ChatPlugin
                     case GroupMessage:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Group/Room Message failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, MessageFailed, "Group/Room Message failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string groupName;
@@ -295,9 +299,7 @@ namespace ChatPlugin
                             using (var msg = Message.Create(GroupMessage, writer))
                             {
                                 foreach (var cl in ChatGroups[groupName].Users.Values)
-                                {
                                     cl.SendMessage(msg, SendMode.Reliable);
-                                }
                             }
                         }
                         break;
@@ -306,8 +308,7 @@ namespace ChatPlugin
                     case JoinGroup:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, JoinGroupFailed, "Join ChatGroup failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, JoinGroupFailed, "Join ChatGroup failed.")) return;
 
                         var playerName = _loginPlugin.UsersLoggedIn[client];
                         string groupName;
@@ -375,8 +376,7 @@ namespace ChatPlugin
                     case LeaveGroup:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, JoinGroupFailed, "Leave ChatGroup failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, JoinGroupFailed, "Leave ChatGroup failed.")) return;
 
                         var playerName = _loginPlugin.UsersLoggedIn[client];
                         string groupName;
@@ -417,13 +417,13 @@ namespace ChatPlugin
                         // Remove Chatgroup if he was the last player in it
                         if (chatGroup.Users.Count == 0 && chatGroup.Name != "General")
                         {
-                            ChatGroups.Remove(chatGroup.Name);
+                            ChatGroups.TryRemove(chatGroup.Name, out _);
                         }
 
                         // Remove chatgroup from the players groups
                         if (ChatGroupsOfPlayer[playerName].Count == 0)
                         {
-                            ChatGroupsOfPlayer.Remove(playerName);
+                            ChatGroupsOfPlayer.TryRemove(playerName, out _);
                         }
                         else
                         {
@@ -449,8 +449,7 @@ namespace ChatPlugin
                     case GetActiveGroups:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, GetActiveGroupsFailed, "Get ChatGroups failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, GetActiveGroupsFailed, "Get ChatGroups failed.")) return;
 
                         var groupNames = ChatGroups.Values.Select(chatGroup => chatGroup.Name).ToArray();
 
@@ -471,18 +470,17 @@ namespace ChatPlugin
 
         private void RemovePlayerFromChatGroups(string username)
         {
-            if (!ChatGroupsOfPlayer.ContainsKey(username))
-                return;
+            if (!ChatGroupsOfPlayer.ContainsKey(username)) return;
 
             foreach (var chatGroup in ChatGroupsOfPlayer[username])
             {
                 ChatGroups[chatGroup.Name].RemovePlayer(username);
                 if (chatGroup.Users.Count == 0 && chatGroup.Name != "General")
                 {
-                    ChatGroups.Remove(chatGroup.Name);
+                    ChatGroups.TryRemove(chatGroup.Name, out _);
                 }
             }
-            ChatGroupsOfPlayer.Remove(username);
+            ChatGroupsOfPlayer.TryRemove(username, out _);
         }
 
         private void GetChatGroupsCommand(object sender, CommandEventArgs e)
@@ -492,9 +490,7 @@ namespace ChatPlugin
             if (e.Arguments.Length == 0)
             {
                 foreach (var chatGroup in chatGroups)
-                {
                     WriteEvent(chatGroup.Name + " - " + chatGroup.Users.Count, LogType.Info);
-                }
             }
             else
             {
@@ -505,9 +501,7 @@ namespace ChatPlugin
                     return;
                 }
                 foreach (var chatGroup in ChatGroupsOfPlayer[username])
-                {
                     WriteEvent(chatGroup.Name, LogType.Info);
-                }
             }
         }
     }

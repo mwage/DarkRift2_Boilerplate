@@ -15,11 +15,6 @@ namespace RoomSystemPlugin
             IsHost = isHost;
         }
 
-        public void SetHost(bool isHost)
-        {
-            IsHost = isHost;
-        }
-
         public void Serialize(SerializeEvent e)
         {
             e.Writer.Write(Id);
@@ -29,6 +24,11 @@ namespace RoomSystemPlugin
 
         public void Deserialize(DeserializeEvent e)
         {
+        }
+
+        public void SetHost(bool isHost)
+        {
+            IsHost = isHost;
         }
     }
 }

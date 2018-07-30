@@ -1,10 +1,9 @@
-﻿using DarkRift;
-using DarkRift.Server;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Xml.Linq;
+using DarkRift;
+using DarkRift.Server;
 using Database;
 
 namespace LoginPlugin
@@ -12,7 +11,7 @@ namespace LoginPlugin
     public class Friends : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
+        public override bool ThreadSafe => true;
 
         public override Command[] Commands => new[]
         {
@@ -43,9 +42,10 @@ namespace LoginPlugin
         private const ushort FriendLoggedOut = 15 + Shift;
 
         private const string ConfigPath = @"Plugins\Friends.xml";
+        private static readonly object InitializeLock = new object();
         private DatabaseProxy _database;
-        private Login _loginPlugin;
         private bool _debug = true;
+        private Login _loginPlugin;
 
         public Friends(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -89,25 +89,30 @@ namespace LoginPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
+            // If you have DR2 Pro, use the Loaded() method instead and spare yourself the locks
             if (_database == null)
             {
-                _database = PluginManager.GetPluginByType<DatabaseProxy>();
-                _loginPlugin = PluginManager.GetPluginByType<Login>();
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        _loginPlugin = PluginManager.GetPluginByType<Login>();
 
-                _loginPlugin.onLogout += LogoutFriend;
+                        _loginPlugin.onLogout += LogoutFriend;
+                    }
+                }
             }
 
             e.Client.MessageReceived += OnMessageReceived;
         }
 
-        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
+        private async void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             using (var message = e.GetMessage())
             {
                 // Check if message is meant for this plugin
-                if (message.Tag < Login.TagsPerPlugin * FriendsTag || message.Tag >= Login.TagsPerPlugin * (FriendsTag + 1))
-                    return;
+                if (message.Tag < Login.TagsPerPlugin * FriendsTag || message.Tag >= Login.TagsPerPlugin * (FriendsTag + 1)) return;
 
                 var client = e.Client;
 
@@ -116,8 +121,7 @@ namespace LoginPlugin
                     case FriendRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, RequestFailed, "Friend request failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, RequestFailed, "Friend request failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -138,7 +142,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var receiverUser = _database.DataLayer.GetUser(receiver);
+                            var receiverUser = _database.DataLayer.GetUser(receiver).Result;
                             if (receiverUser == null)
                             {
                                 // No user with that name found -> return error 3
@@ -182,7 +186,7 @@ namespace LoginPlugin
                             }
 
                             // Save the request in the database to both users
-                            _database.DataLayer.AddRequest(senderName, receiver);
+                            await _database.DataLayer.AddRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -226,8 +230,7 @@ namespace LoginPlugin
                     case DeclineRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, DeclineRequestFailed, "DeclineFriendRequest failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, DeclineRequestFailed, "DeclineFriendRequest failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -249,7 +252,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users
-                            _database.DataLayer.RemoveRequest(senderName, receiver);
+                            await _database.DataLayer.RemoveRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -295,8 +298,7 @@ namespace LoginPlugin
                     case AcceptRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, AcceptRequestFailed, "AcceptFriendRequest failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, AcceptRequestFailed, "AcceptFriendRequest failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -318,8 +320,8 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users and add their names to their friend list
-                            _database.DataLayer.RemoveRequest(senderName, receiver);
-                            _database.DataLayer.AddFriend(senderName, receiver);
+                            await _database.DataLayer.RemoveRequest(senderName, receiver);
+                            await _database.DataLayer.AddFriend(senderName, receiver);
 
                             var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
 
@@ -367,8 +369,7 @@ namespace LoginPlugin
                     case RemoveFriend:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, RemoveFriendFailed, "RemoveFriend failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, RemoveFriendFailed, "RemoveFriend failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -390,7 +391,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the names from the friendlist in the database for both users
-                            _database.DataLayer.RemoveFriend(senderName, receiver);
+                            await _database.DataLayer.RemoveFriend(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -436,14 +437,13 @@ namespace LoginPlugin
                     case GetAllFriends:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, GetAllFriendsFailed, "GetAllFriends failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, GetAllFriendsFailed, "GetAllFriends failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
 
                         try
                         {
-                            var user = _database.DataLayer.GetUser(senderName);
+                            var user = _database.DataLayer.GetUser(senderName).Result;
                             var onlineFriends = new List<string>();
                             var offlineFriends = new List<string>();
 
@@ -452,7 +452,6 @@ namespace LoginPlugin
                                 writer.Write(senderName);
 
                                 foreach (var friend in user.Friends)
-                                {
                                     if (_loginPlugin.Clients.ContainsKey(friend))
                                     {
                                         onlineFriends.Add(friend);
@@ -469,7 +468,6 @@ namespace LoginPlugin
                                     {
                                         offlineFriends.Add(friend);
                                     }
-                                }
                             }
 
                             using (var writer = DarkRiftWriter.Create())
@@ -503,14 +501,13 @@ namespace LoginPlugin
 
         public void LogoutFriend(string username)
         {
-            var friends = _database.DataLayer.GetUser(username).Friends;
+            var friends = _database.DataLayer.GetUser(username).Result.Friends;
 
             using (var writer = DarkRiftWriter.Create())
             {
                 writer.Write(username);
 
                 foreach (var friend in friends)
-                {
                     if (_loginPlugin.Clients.ContainsKey(friend))
                     {
                         // let online friends know he logged out
@@ -521,13 +518,12 @@ namespace LoginPlugin
                             client.SendMessage(msg, SendMode.Reliable);
                         }
                     }
-                }
             }
         }
 
         #region Commands
 
-        private void AddFriendCommand(object sender, CommandEventArgs e)
+        private async void AddFriendCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -545,7 +541,7 @@ namespace LoginPlugin
 
             try
             {
-                _database.DataLayer.AddFriend(username, friend);
+                await _database.DataLayer.AddFriend(username, friend);
 
                 if (_debug)
                 {
@@ -558,7 +554,7 @@ namespace LoginPlugin
             }
         }
 
-        private void DelFriendCommand(object sender, CommandEventArgs e)
+        private async void DelFriendCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -576,7 +572,7 @@ namespace LoginPlugin
 
             try
             {
-                _database.DataLayer.RemoveFriend(username, friend);
+                await _database.DataLayer.RemoveFriend(username, friend);
 
                 if (_debug)
                 {
@@ -588,6 +584,7 @@ namespace LoginPlugin
                 WriteEvent("Database Error: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
             }
         }
+
         #endregion
     }
 }

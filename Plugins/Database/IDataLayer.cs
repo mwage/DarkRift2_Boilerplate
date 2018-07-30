@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Database
 {
@@ -12,19 +8,19 @@ namespace Database
 
         #region Login
 
-        IUser GetUser(string username);
-        bool UsernameAvailable(string username);
-        void AddNewUser(string username, string password);
-        void DeleteUser(string username);
+        Task<IUser> GetUser(string username);
+        Task<bool> UsernameAvailable(string username);
+        Task AddNewUser(string username, string password);
+        Task DeleteUser(string username);
 
         #endregion
 
         #region Friends
 
-        void AddRequest(string sender, string receiver);
-        void RemoveRequest(string sender, string receiver);
-        void AddFriend(string sender, string receiver);
-        void RemoveFriend(string sender, string receiver);
+        Task AddRequest(string sender, string receiver);
+        Task RemoveRequest(string sender, string receiver);
+        Task AddFriend(string sender, string receiver);
+        Task RemoveFriend(string sender, string receiver);
 
         #endregion
     }

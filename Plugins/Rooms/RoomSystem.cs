@@ -1,22 +1,24 @@
-﻿using DarkRift;
-using DarkRift.Server;
-using LoginPlugin;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using DarkRift;
+using DarkRift.Server;
+using LoginPlugin;
 
 namespace RoomSystemPlugin
 {
     public class RoomSystem : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
+        public override bool ThreadSafe => true;
         public override Command[] Commands => new[]
         {
             new Command("Rooms", "Shows all rooms", "", GetRoomsCommand)
         };
+
+        public ConcurrentDictionary<ushort, Room> RoomList { get; } = new ConcurrentDictionary<ushort, Room>();
 
         // Tag
         private const byte RoomTag = 2;
@@ -40,10 +42,10 @@ namespace RoomSystemPlugin
         private const ushort StartGameFailed = 14 + Shift;
 
         private const string ConfigPath = @"Plugins\RoomSystem.xml";
-        private Login _loginPlugin;
+        private static readonly object InitializeLock = new object();
+        private readonly ConcurrentDictionary<uint, Room> _playersInRooms = new ConcurrentDictionary<uint, Room>();
         private bool _debug = true;
-        public Dictionary<ushort, Room> RoomList = new Dictionary<ushort, Room>();
-        private readonly Dictionary<uint, Room> _playersInRooms = new Dictionary<uint, Room>();
+        private Login _loginPlugin;
 
         public RoomSystem(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -88,10 +90,16 @@ namespace RoomSystemPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method instead
+            // If you have DR2 Pro, use the Loaded() method instead and spare yourself the locks
             if (_loginPlugin == null)
             {
-                _loginPlugin = PluginManager.GetPluginByType<Login>();
+                lock (InitializeLock)
+                {
+                    if (_loginPlugin == null)
+                    {
+                        _loginPlugin = PluginManager.GetPluginByType<Login>();
+                    }
+                }
             }
 
             e.Client.MessageReceived += OnMessageReceived;
@@ -107,9 +115,8 @@ namespace RoomSystemPlugin
             using (var message = e.GetMessage())
             {
                 // Check if message is meant for this plugin
-                if (message.Tag < Login.TagsPerPlugin * RoomTag || message.Tag >= Login.TagsPerPlugin * (RoomTag + 1))
-                    return;
-
+                if (message.Tag < Login.TagsPerPlugin * RoomTag || message.Tag >= Login.TagsPerPlugin * (RoomTag + 1)) return;
+     
                 var client = e.Client;
 
                 switch (message.Tag)
@@ -117,9 +124,8 @@ namespace RoomSystemPlugin
                     case Create:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, CreateFailed, "Create Room failed."))
-                            return;
-
+                        if (!_loginPlugin.PlayerLoggedIn(client, CreateFailed, "Create Room failed.")) return;
+                 
                         string roomName;
                         bool isVisible;
 
@@ -143,8 +149,8 @@ namespace RoomSystemPlugin
                         var room = new Room(roomId, roomName, isVisible);
                         var player = new Player(client.ID, _loginPlugin.UsersLoggedIn[client], true);
                         room.AddPlayer(player, client);
-                        RoomList.Add(roomId, room);
-                        _playersInRooms.Add(client.ID, room);
+                        RoomList.TryAdd(roomId, room);
+                        _playersInRooms.TryAdd(client.ID, room);
 
                         using (var writer = DarkRiftWriter.Create())
                         {
@@ -167,9 +173,8 @@ namespace RoomSystemPlugin
                     case Join:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, JoinFailed, "Join Room failed."))
-                            return;
-
+                        if (!_loginPlugin.PlayerLoggedIn(client, JoinFailed, "Join Room failed.")) return;
+           
                         ushort roomId;
 
                         try
@@ -242,9 +247,7 @@ namespace RoomSystemPlugin
                                 writer.Write(room);
 
                                 foreach (var player in room.PlayerList)
-                                {
                                     writer.Write(player);
-                                }
 
                                 using (var msg = Message.Create(JoinSuccess, writer))
                                 {
@@ -260,9 +263,7 @@ namespace RoomSystemPlugin
                                 using (var msg = Message.Create(PlayerJoined, writer))
                                 {
                                     foreach (var cl in room.Clients.Where(c => c.ID != client.ID))
-                                    {
                                         cl.SendMessage(msg, SendMode.Reliable);
-                                    }
                                 }
                             }
 
@@ -303,18 +304,15 @@ namespace RoomSystemPlugin
                     case GetOpenRooms:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, GetOpenRoomsFailed, "GetRoomRequest failed."))
-                            return;
-
+                        if (!_loginPlugin.PlayerLoggedIn(client, GetOpenRoomsFailed, "GetRoomRequest failed.")) return;
+                  
                         // If he is, send back all available rooms
                         var availableRooms = RoomList.Values.Where(r => r.IsVisible && !r.HasStarted).ToList();
 
                         using (var writer = DarkRiftWriter.Create())
                         {
                             foreach (var room in availableRooms)
-                            {
                                 writer.Write(room);
-                            }
 
                             using (var msg = Message.Create(GetOpenRooms, writer))
                             {
@@ -328,9 +326,8 @@ namespace RoomSystemPlugin
                     case StartGame:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, GetOpenRoomsFailed, "Start Game request failed."))
-                            return;
-
+                        if (!_loginPlugin.PlayerLoggedIn(client, GetOpenRoomsFailed, "Start Game request failed.")) return;
+               
                         ushort roomId;
 
                         try
@@ -377,9 +374,7 @@ namespace RoomSystemPlugin
                         using (var msg = Message.CreateEmpty(StartGameSuccess))
                         {
                             foreach (var cl in RoomList[roomId].Clients)
-                            {
                                 cl.SendMessage(msg, SendMode.Reliable);
-                            }
                         }
                         break;
                     }
@@ -414,12 +409,11 @@ namespace RoomSystemPlugin
         private void LeaveRoom(IClient client)
         {
             var id = client.ID;
-            if (!_playersInRooms.ContainsKey(id))
-                return;
-
+            if (!_playersInRooms.ContainsKey(id)) return;
+   
             var room = _playersInRooms[id];
             var leaverName = room.PlayerList.FirstOrDefault(p => p.Id == client.ID)?.Name;
-            _playersInRooms.Remove(id);
+            _playersInRooms.TryRemove(id, out _);
 
             if (room.RemovePlayer(client))
             {
@@ -435,7 +429,7 @@ namespace RoomSystemPlugin
                 // Remove room if it's empty
                 if (room.PlayerList.Count == 0)
                 {
-                    RoomList.Remove(RoomList.FirstOrDefault(r => r.Value == room).Key);
+                    RoomList.TryRemove(RoomList.FirstOrDefault(r => r.Value == room).Key, out _);
                     if (_debug)
                     {
                         WriteEvent("Room " + room.Id + " deleted!", LogType.Info);
@@ -456,9 +450,7 @@ namespace RoomSystemPlugin
                         using (var msg = Message.Create(PlayerLeft, writer))
                         {
                             foreach (var cl in room.Clients)
-                            {
                                 cl.SendMessage(msg, SendMode.Reliable);
-                            }
                         }
                     }
                 }
@@ -480,9 +472,8 @@ namespace RoomSystemPlugin
             WriteEvent("Active Rooms:", LogType.Info);
             var rooms = RoomList.Values.ToList();
             foreach (var room in rooms)
-            {
-                WriteEvent(room.Name + " [" + room.Id + "] - " + room.PlayerList.Count + "/" + room.MaxPlayers, LogType.Info);
-            }
+                WriteEvent(room.Name + " [" + room.Id + "] - " + room.PlayerList.Count + "/" + room.MaxPlayers,
+                    LogType.Info);
         }
     }
 }
