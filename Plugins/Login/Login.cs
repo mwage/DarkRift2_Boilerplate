@@ -143,7 +143,7 @@ namespace LoginPlugin
             }
         }
 
-        private async void OnMessageReceived(object sender, MessageReceivedEventArgs e)
+        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             using (var message = e.GetMessage())
             {
@@ -202,7 +202,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = await _database.DataLayer.GetUser(username);
+                            var user = _database.DataLayer.GetUser(username);
 
                             if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                             {
@@ -297,9 +297,9 @@ namespace LoginPlugin
 
                         try
                         {
-                            if (await _database.DataLayer.UsernameAvailable(username))
+                            if (_database.DataLayer.UsernameAvailable(username))
                             {
-                                await _database.DataLayer.AddNewUser(username, password);
+                                _database.DataLayer.AddNewUser(username, password);
 
                                 if (_debug)
                                 {
@@ -359,7 +359,7 @@ namespace LoginPlugin
             WriteEvent("Debug is: " + _debug, LogType.Info);
         }
 
-        private async void AddUserCommand(object sender, CommandEventArgs e)
+        private void AddUserCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -377,9 +377,9 @@ namespace LoginPlugin
 
             try
             {
-                if (await _database.DataLayer.UsernameAvailable(username))
+                if (_database.DataLayer.UsernameAvailable(username))
                 {
-                    await _database.DataLayer.AddNewUser(username, password);
+                    _database.DataLayer.AddNewUser(username, password);
 
                     if (_debug)
                     {
@@ -397,7 +397,7 @@ namespace LoginPlugin
             }
         }
 
-        private async void DelUserCommand(object sender, CommandEventArgs e)
+        private void DelUserCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -408,7 +408,7 @@ namespace LoginPlugin
 
             try
             {
-                await _database.DataLayer.DeleteUser(username);
+                _database.DataLayer.DeleteUser(username);
 
                 if (_debug)
                 {

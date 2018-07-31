@@ -107,7 +107,7 @@ namespace LoginPlugin
             e.Client.MessageReceived += OnMessageReceived;
         }
 
-        private async void OnMessageReceived(object sender, MessageReceivedEventArgs e)
+        private void OnMessageReceived(object sender, MessageReceivedEventArgs e)
         {
             using (var message = e.GetMessage())
             {
@@ -142,7 +142,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var receiverUser = await _database.DataLayer.GetUser(receiver);
+                            var receiverUser = _database.DataLayer.GetUser(receiver);
                             if (receiverUser == null)
                             {
                                 // No user with that name found -> return error 3
@@ -186,7 +186,7 @@ namespace LoginPlugin
                             }
 
                             // Save the request in the database to both users
-                            await _database.DataLayer.AddRequest(senderName, receiver);
+                            _database.DataLayer.AddRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -252,7 +252,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users
-                            await _database.DataLayer.RemoveRequest(senderName, receiver);
+                            _database.DataLayer.RemoveRequest(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -320,8 +320,8 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users and add their names to their friend list
-                            await _database.DataLayer.RemoveRequest(senderName, receiver);
-                            await _database.DataLayer.AddFriend(senderName, receiver);
+                            _database.DataLayer.RemoveRequest(senderName, receiver);
+                            _database.DataLayer.AddFriend(senderName, receiver);
 
                             var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
 
@@ -391,7 +391,7 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the names from the friendlist in the database for both users
-                            await _database.DataLayer.RemoveFriend(senderName, receiver);
+                            _database.DataLayer.RemoveFriend(senderName, receiver);
 
                             using (var writer = DarkRiftWriter.Create())
                             {
@@ -443,7 +443,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = await _database.DataLayer.GetUser(senderName);
+                            var user = _database.DataLayer.GetUser(senderName);
                             var onlineFriends = new List<string>();
                             var offlineFriends = new List<string>();
 
@@ -499,11 +499,11 @@ namespace LoginPlugin
             }
         }
 
-        public async void LogoutFriend(string username)
+        public void LogoutFriend(string username)
         {
             try
             {
-                var friends = (await _database.DataLayer.GetUser(username)).Friends;
+                var friends = _database.DataLayer.GetUser(username).Friends;
 
                 using (var writer = DarkRiftWriter.Create())
                 {
@@ -530,7 +530,7 @@ namespace LoginPlugin
 
         #region Commands
 
-        private async void AddFriendCommand(object sender, CommandEventArgs e)
+        private void AddFriendCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -548,7 +548,7 @@ namespace LoginPlugin
 
             try
             {
-                await _database.DataLayer.AddFriend(username, friend);
+                _database.DataLayer.AddFriend(username, friend);
 
                 if (_debug)
                 {
@@ -561,7 +561,7 @@ namespace LoginPlugin
             }
         }
 
-        private async void DelFriendCommand(object sender, CommandEventArgs e)
+        private void DelFriendCommand(object sender, CommandEventArgs e)
         {
             if (_database == null)
             {
@@ -579,7 +579,7 @@ namespace LoginPlugin
 
             try
             {
-                await _database.DataLayer.RemoveFriend(username, friend);
+                _database.DataLayer.RemoveFriend(username, friend);
 
                 if (_debug)
                 {
