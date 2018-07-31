@@ -1,7 +1,6 @@
-﻿using Database;
+﻿using System.Linq;
+using Database;
 using MongoDB.Driver;
-using System.Linq;
-using DarkRift;
 
 namespace MongoDbConnector
 {

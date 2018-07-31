@@ -1,10 +1,9 @@
-﻿using DarkRift;
-using DarkRift.Server;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Xml.Linq;
+using DarkRift;
+using DarkRift.Server;
 using Database;
 
 namespace LoginPlugin
@@ -12,7 +11,7 @@ namespace LoginPlugin
     public class Friends : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
+        public override bool ThreadSafe => true;
 
         public override Command[] Commands => new[]
         {
@@ -43,9 +42,10 @@ namespace LoginPlugin
         private const ushort FriendLoggedOut = 15 + Shift;
 
         private const string ConfigPath = @"Plugins\Friends.xml";
+        private static readonly object InitializeLock = new object();
         private DatabaseProxy _database;
-        private Login _loginPlugin;
         private bool _debug = true;
+        private Login _loginPlugin;
 
         public Friends(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -89,13 +89,19 @@ namespace LoginPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
+            // If you have DR2 Pro, use the Loaded() method instead and spare yourself the locks
             if (_database == null)
             {
-                _database = PluginManager.GetPluginByType<DatabaseProxy>();
-                _loginPlugin = PluginManager.GetPluginByType<Login>();
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        _loginPlugin = PluginManager.GetPluginByType<Login>();
 
-                _loginPlugin.onLogout += LogoutFriend;
+                        _loginPlugin.onLogout += LogoutFriend;
+                    }
+                }
             }
 
             e.Client.MessageReceived += OnMessageReceived;
@@ -106,8 +112,7 @@ namespace LoginPlugin
             using (var message = e.GetMessage())
             {
                 // Check if message is meant for this plugin
-                if (message.Tag < Login.TagsPerPlugin * FriendsTag || message.Tag >= Login.TagsPerPlugin * (FriendsTag + 1))
-                    return;
+                if (message.Tag < Login.TagsPerPlugin * FriendsTag || message.Tag >= Login.TagsPerPlugin * (FriendsTag + 1)) return;
 
                 var client = e.Client;
 
@@ -116,8 +121,7 @@ namespace LoginPlugin
                     case FriendRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, RequestFailed, "Friend request failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, RequestFailed, "Friend request failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -226,8 +230,7 @@ namespace LoginPlugin
                     case DeclineRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, DeclineRequestFailed, "DeclineFriendRequest failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, DeclineRequestFailed, "DeclineFriendRequest failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -295,8 +298,7 @@ namespace LoginPlugin
                     case AcceptRequest:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, AcceptRequestFailed, "AcceptFriendRequest failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, AcceptRequestFailed, "AcceptFriendRequest failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -367,8 +369,7 @@ namespace LoginPlugin
                     case RemoveFriend:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, RemoveFriendFailed, "RemoveFriend failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, RemoveFriendFailed, "RemoveFriend failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
                         string receiver;
@@ -436,8 +437,7 @@ namespace LoginPlugin
                     case GetAllFriends:
                     {
                         // If player isn't logged in -> return error 1
-                        if (!_loginPlugin.PlayerLoggedIn(client, GetAllFriendsFailed, "GetAllFriends failed."))
-                            return;
+                        if (!_loginPlugin.PlayerLoggedIn(client, GetAllFriendsFailed, "GetAllFriends failed.")) return;
 
                         var senderName = _loginPlugin.UsersLoggedIn[client];
 
@@ -452,7 +452,6 @@ namespace LoginPlugin
                                 writer.Write(senderName);
 
                                 foreach (var friend in user.Friends)
-                                {
                                     if (_loginPlugin.Clients.ContainsKey(friend))
                                     {
                                         onlineFriends.Add(friend);
@@ -469,7 +468,6 @@ namespace LoginPlugin
                                     {
                                         offlineFriends.Add(friend);
                                     }
-                                }
                             }
 
                             using (var writer = DarkRiftWriter.Create())
@@ -503,25 +501,30 @@ namespace LoginPlugin
 
         public void LogoutFriend(string username)
         {
-            var friends = _database.DataLayer.GetUser(username).Friends;
-
-            using (var writer = DarkRiftWriter.Create())
+            try
             {
-                writer.Write(username);
+                var friends = _database.DataLayer.GetUser(username).Friends;
 
-                foreach (var friend in friends)
+                using (var writer = DarkRiftWriter.Create())
                 {
-                    if (_loginPlugin.Clients.ContainsKey(friend))
-                    {
-                        // let online friends know he logged out
-                        var client = _loginPlugin.Clients[friend];
+                    writer.Write(username);
 
-                        using (var msg = Message.Create(FriendLoggedOut, writer))
+                    foreach (var friend in friends)
+                        if (_loginPlugin.Clients.ContainsKey(friend))
                         {
-                            client.SendMessage(msg, SendMode.Reliable);
+                            // let online friends know he logged out
+                            var client = _loginPlugin.Clients[friend];
+
+                            using (var msg = Message.Create(FriendLoggedOut, writer))
+                            {
+                                client.SendMessage(msg, SendMode.Reliable);
+                            }
                         }
-                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                WriteEvent($"Database Error. Failed to notify friends of Logout! \n\n{ex.Message}\n{ex.StackTrace}", LogType.Error);
             }
         }
 
@@ -588,6 +591,7 @@ namespace LoginPlugin
                 WriteEvent("Database Error: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
             }
         }
+
         #endregion
     }
 }

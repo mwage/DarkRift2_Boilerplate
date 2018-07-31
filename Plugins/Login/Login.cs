@@ -1,9 +1,9 @@
-﻿using DarkRift;
-using DarkRift.Server;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Xml.Linq;
+using DarkRift;
+using DarkRift.Server;
 using Database;
 
 namespace LoginPlugin
@@ -11,17 +11,23 @@ namespace LoginPlugin
     public class Login : Plugin
     {
         public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
+        public override bool ThreadSafe => true;
         public override Command[] Commands => new[]
         {
-            new Command ("AllowAddUser", "Allow Users to be added to the Database [AllowAddUser on/off]", "", AllowAddUserCommand),
+            new Command("AllowAddUser", "Allow Users to be added to the Database [AllowAddUser on/off]", "",
+                AllowAddUserCommand),
             new Command("AddUser", "Adds a User to the Database [AddUser name password]", "", AddUserCommand),
             new Command("DelUser", "Deletes a User from the Database [DelUser name]", "", DelUserCommand),
             new Command("LPDebug", "Enables Plugin Debug", "", DebugCommand),
             new Command("LoggedIn", "Logs number of online users", "", UsersLoggedInCommand),
             new Command("Online", "Logs number of online users", "", UsersOnlineCommand)
         };
-       
+
+        public ConcurrentDictionary<string, IClient> Clients { get; } = new ConcurrentDictionary<string, IClient>();
+        public ConcurrentDictionary<IClient, string> UsersLoggedIn { get; } = new ConcurrentDictionary<IClient, string>();
+
+        public delegate void LogoutEventHandler(string username);
+
         // Maximum number of Tags per Plugin
         public const ushort TagsPerPlugin = 256;
 
@@ -39,20 +45,13 @@ namespace LoginPlugin
         private const ushort AddUserSuccess = 6 + Shift;
         private const ushort AddUserFailed = 7 + Shift;
 
-        // Connects the Client with his Username
-        public Dictionary<IClient, string> UsersLoggedIn = new Dictionary<IClient, string>();
-        public Dictionary<string, IClient> Clients = new Dictionary<string, IClient>();
-
         private const string ConfigPath = @"Plugins\Login.xml";
         private const string PrivateKeyPath = @"Plugins\PrivateKey.xml";
-        private DatabaseProxy _database;
-        private string _privateKey;
+        private static readonly object InitializeLock = new object();
         private bool _allowAddUser = true;
+        private DatabaseProxy _database;
         private bool _debug = true;
-
-        public delegate void LogoutEventHandler(string username);
-
-        public event LogoutEventHandler onLogout;
+        private string _privateKey;
 
         public Login(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -61,6 +60,8 @@ namespace LoginPlugin
             ClientManager.ClientConnected += OnPlayerConnected;
             ClientManager.ClientDisconnected += OnPlayerDisconnected;
         }
+
+        public event LogoutEventHandler onLogout;
 
         private void LoadConfig()
         {
@@ -71,7 +72,7 @@ namespace LoginPlugin
                 document = new XDocument(new XDeclaration("1.0", "utf-8", "yes"),
                     new XComment("Settings for the Login Plugin"),
                     new XElement("Variables", new XAttribute("Debug", true), new XAttribute("AllowAddUser", true))
-                    );
+                );
                 try
                 {
                     document.Save(ConfigPath);
@@ -111,10 +112,16 @@ namespace LoginPlugin
 
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            // If you have DR2 Pro, use the Plugin.Loaded() method to get the DbConnector Plugin instead
+            // If you have DR2 Pro, use the Loaded() method instead and spare yourself the locks
             if (_database == null)
             {
-                _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                    }
+                }
             }
 
             UsersLoggedIn[e.Client] = null;
@@ -126,11 +133,11 @@ namespace LoginPlugin
         {
             if (UsersLoggedIn.ContainsKey(e.Client))
             {
-                var username = UsersLoggedIn[e.Client];
-                UsersLoggedIn.Remove(e.Client);
+                UsersLoggedIn.TryRemove(e.Client, out var username);
+
                 if (username != null)
                 {
-                    Clients.Remove(username);
+                    Clients.TryRemove(username, out _);
                     onLogout?.Invoke(username);
                 }
             }
@@ -141,8 +148,7 @@ namespace LoginPlugin
             using (var message = e.GetMessage())
             {
                 // Check if message is meant for this plugin
-                if (message.Tag >= TagsPerPlugin * (LoginTag + 1))
-                    return;
+                if (message.Tag >= TagsPerPlugin * (LoginTag + 1)) return;
 
                 var client = e.Client;
 
@@ -179,12 +185,12 @@ namespace LoginPlugin
                             }
                         }
 
-                        if (UsersLoggedIn.ContainsValue(username))
+                        if (Clients.ContainsKey(username))
                         {
                             // Username is already in use -> return Error 3
                             using (var writer = DarkRiftWriter.Create())
                             {
-                                writer.Write((byte)3);
+                                writer.Write((byte) 3);
 
                                 using (var msg = Message.Create(LoginFailed, writer))
                                 {
@@ -223,7 +229,7 @@ namespace LoginPlugin
                                 // Return Error 1 for "Wrong username/password combination"
                                 using (var writer = DarkRiftWriter.Create())
                                 {
-                                    writer.Write((byte)1);
+                                    writer.Write((byte) 1);
 
                                     using (var msg = Message.Create(LoginFailed, writer))
                                     {
@@ -247,7 +253,7 @@ namespace LoginPlugin
 
                         if (username != null)
                         {
-                            Clients.Remove(username);
+                            Clients.TryRemove(username, out _);
                         }
 
                         if (_debug)
@@ -266,8 +272,7 @@ namespace LoginPlugin
 
                     case AddUser:
                     {
-                        if (!_allowAddUser)
-                            return;
+                        if (!_allowAddUser) return;
 
                         string username;
                         string password;
@@ -316,7 +321,7 @@ namespace LoginPlugin
                                 // Return Error 1 for "Wrong username/password combination"
                                 using (var writer = DarkRiftWriter.Create())
                                 {
-                                    writer.Write((byte)1);
+                                    writer.Write((byte) 1);
 
                                     using (var msg = Message.Create(AddUserFailed, writer))
                                     {
@@ -333,7 +338,7 @@ namespace LoginPlugin
                         break;
                     }
                 }
-            }       
+            }
         }
 
         #region Commands
@@ -433,25 +438,25 @@ namespace LoginPlugin
                     break;
             }
         }
+
         #endregion
 
         #region ErrorHandling
 
         public bool PlayerLoggedIn(IClient client, ushort tag, string error)
         {
-            if (UsersLoggedIn[client] != null)
-                return true;
+            if (UsersLoggedIn[client] != null) return true;
 
             using (var writer = DarkRiftWriter.Create())
             {
-                writer.Write((byte)1);
+                writer.Write((byte) 1);
 
                 using (var msg = Message.Create(tag, writer))
                 {
                     client.SendMessage(msg, SendMode.Reliable);
                 }
             }
-            
+
             WriteEvent(error + " Player wasn't logged in.", LogType.Warning);
             return false;
         }
@@ -460,14 +465,14 @@ namespace LoginPlugin
         {
             using (var writer = DarkRiftWriter.Create())
             {
-                writer.Write((byte)0);
+                writer.Write((byte) 0);
 
                 using (var msg = Message.Create(tag, writer))
                 {
                     client.SendMessage(msg, SendMode.Reliable);
                 }
             }
-            
+
             WriteEvent(error + " Invalid data received: " + e.Message + " - " + e.StackTrace, LogType.Warning);
         }
 

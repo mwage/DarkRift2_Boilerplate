@@ -1,6 +1,5 @@
-﻿using Database;
+﻿using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
-using System.Collections.Generic;
 
 namespace MongoDbConnector
 {
@@ -8,7 +7,7 @@ namespace MongoDbConnector
     {
         // MongoDb has problems with Lists as properties, so you can't use the DTO as schema.
         // In most other cases you can just use the Schema as the DTO.
-        
+
         [BsonId]
         public string Username { get; }
         public string Password { get; }

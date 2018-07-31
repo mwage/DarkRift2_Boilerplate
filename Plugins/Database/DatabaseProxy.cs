@@ -6,32 +6,37 @@ namespace Database
 {
     public class DatabaseProxy : Plugin
     {
+        public override Version Version => new Version(1, 0, 0);
+        public override bool ThreadSafe => true;
+
+        public IDataLayer DataLayer { get; private set; }
+
+        private static readonly object InitializeLock = new object();
+
         public DatabaseProxy(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
         }
 
-        public override Version Version => new Version(1, 0, 0);
-        public override bool ThreadSafe => false;
-
-        public IDataLayer DataLayer { get; private set; }
-
         public void SetDatabase(IDataLayer dataLayer)
         {
-            if (DataLayer == dataLayer)
+            lock (InitializeLock)
             {
-                WriteEvent($"Database: {dataLayer.Name} is already selected", LogType.Info);
-            }
+                if (DataLayer == dataLayer)
+                {
+                    WriteEvent($"Database: {dataLayer.Name} is already selected", LogType.Info);
+                }
 
-            if (DataLayer != null)
-            {
-                WriteEvent($"Switching from Database: {DataLayer.Name} to Database: {dataLayer.Name}", LogType.Warning);
-            }
-            else
-            {
-                WriteEvent("Selected Database: " + dataLayer.Name, LogType.Info);
-            }
+                if (DataLayer != null)
+                {
+                    WriteEvent($"Switching from Database: {DataLayer.Name} to Database: {dataLayer.Name}", LogType.Warning);
+                }
+                else
+                {
+                    WriteEvent("Selected Database: " + dataLayer.Name, LogType.Info);
+                }
 
-            DataLayer = dataLayer;
+                DataLayer = dataLayer;
+            }
         }
 
         #region ErrorHandling

@@ -1,28 +1,29 @@
-﻿using DarkRift;
+﻿using System;
+using System.IO;
+using System.Xml.Linq;
+using DarkRift;
 using DarkRift.Server;
 using Database;
 using MongoDB.Driver;
-using System;
-using System.IO;
-using System.Xml.Linq;
 
 namespace MongoDbConnector
 {
     public class MongoDbConnector : Plugin
     {
         public override Version Version => new Version(2, 0, 0);
-        public override bool ThreadSafe => false;
+        public override bool ThreadSafe => true;
         public override Command[] Commands => new[]
         {
-            new Command ("LoadMongo", "Loads Mongo Db Database", "", LoadDbCommand),
+            new Command("LoadMongo", "Loads Mongo Db Database", "", LoadDbCommand)
         };
 
-        private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
-        private DatabaseProxy _database;
-        private readonly DataLayer _dataLayer;
-
         public IMongoCollection<User> Users { get; private set; }
+
+        private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
+        private static readonly object InitializeLock = new object();
+        private readonly DataLayer _dataLayer;
         private readonly IMongoDatabase _mongoDatabase;
+        private DatabaseProxy _database;
 
         public MongoDbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
@@ -40,7 +41,7 @@ namespace MongoDbConnector
             {
                 WriteEvent("Failed to connect to MongoDb: " + ex.Message + " - " + ex.StackTrace, LogType.Fatal);
             }
-            
+
             //GetDataLayer
             _dataLayer = new DataLayer("MongoDB", this);
 
@@ -60,13 +61,15 @@ namespace MongoDbConnector
                 try
                 {
                     document.Save(ConfigPath);
-                    WriteEvent("Created /Plugins/DbConnector.xml. Please adjust your connection string and restart the server!",
+                    WriteEvent(
+                        "Created /Plugins/DbConnector.xml. Please adjust your connection string and restart the server!",
                         LogType.Info);
                     return "mongodb://localhost:27017";
                 }
                 catch (Exception ex)
                 {
-                    WriteEvent("Failed to create DbConnector.xml: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
+                    WriteEvent("Failed to create DbConnector.xml: " + ex.Message + " - " + ex.StackTrace,
+                        LogType.Error);
                     return null;
                 }
             }
@@ -76,7 +79,6 @@ namespace MongoDbConnector
                 document = XDocument.Load(ConfigPath);
 
                 return document.Element("ConnectionString").Value;
-
             }
             catch (Exception ex)
             {
@@ -94,18 +96,17 @@ namespace MongoDbConnector
         //If you have DR2 Pro, use the Plugin.Loaded() method instead of this
         private void OnPlayerConnected(object sender, ClientConnectedEventArgs e)
         {
-            //Register the database at initial startup
             if (_database == null)
             {
-                _database = PluginManager.GetPluginByType<DatabaseProxy>();
-                LoadDatabase();
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        _database.SetDatabase(_dataLayer);
+                    }
+                }
             }
-        }
-
-        //Register database
-        private void LoadDatabase()
-        {
-            _database.SetDatabase(_dataLayer);
         }
 
         //Command for setting MongoDB as active database
@@ -113,9 +114,16 @@ namespace MongoDbConnector
         {
             if (_database == null)
             {
-                _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                lock (InitializeLock)
+                {
+                    if (_database == null)
+                    {
+                        _database = PluginManager.GetPluginByType<DatabaseProxy>();
+                        
+                    }
+                }
             }
-            LoadDatabase();
+            _database.SetDatabase(_dataLayer);
         }
     }
 }
