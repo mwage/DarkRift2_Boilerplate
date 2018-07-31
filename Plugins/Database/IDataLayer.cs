@@ -1,4 +1,6 @@
-﻿namespace Database
+﻿using System;
+
+namespace Database
 {
     public interface IDataLayer
     {
@@ -6,19 +8,19 @@
 
         #region Login
 
-        IUser GetUser(string username);
-        bool UsernameAvailable(string username);
-        void AddNewUser(string username, string password);
-        void DeleteUser(string username);
+        void GetUser(string username, Action<IUser> callback);
+        void UsernameAvailable(string username, Action<bool> callback);
+        void AddNewUser(string username, string password, Action callback);
+        void DeleteUser(string username, Action callback);
 
         #endregion
 
         #region Friends
 
-        void AddRequest(string sender, string receiver);
-        void RemoveRequest(string sender, string receiver);
-        void AddFriend(string sender, string receiver);
-        void RemoveFriend(string sender, string receiver);
+        void AddRequest(string sender, string receiver, Action callback);
+        void RemoveRequest(string sender, string receiver, Action callback);
+        void AddFriend(string sender, string receiver, Action callback);
+        void RemoveFriend(string sender, string receiver, Action callback);
 
         #endregion
     }
