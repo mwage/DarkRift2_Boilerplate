@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace MySQLConnector
 {
@@ -14,5 +15,6 @@ namespace MySQLConnector
         public object this[string id] => _rowItems[id];
 
         public Dictionary<string, object> GetRow() => _rowItems;
+        public object[] GetAllValues => _rowItems.Values.ToArray();
     }
 }
