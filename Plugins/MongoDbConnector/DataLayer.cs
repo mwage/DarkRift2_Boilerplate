@@ -27,23 +27,7 @@ namespace MongoDbConnector
             var user = await _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync();
             callback(user != null ? new UserDto(user) : null);
         }
-
-        public async void GetUsers(string[] usernames, Action<IUser[]> callback)
-        {
-            var users = new List<IUser>();
-            var tasks = usernames.Select(username => _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();
-
-            await Task.WhenAll(tasks);
-
-            foreach (var task in tasks)
-            {
-                var user = await task;
-                users.Add(user != null ? new UserDto(user) : null);
-            }
-
-            callback(users.ToArray());
-        }
-
+        
         public async void UsernameAvailable(string username, Action<bool> callback)
         {
             //Checks if a username is already taken
@@ -162,6 +146,26 @@ namespace MongoDbConnector
                 await Task.WhenAll(tasks);
                 callback();
             });
+        }
+
+        #endregion
+
+        #region Helper
+
+        private async void GetUsers(string[] usernames, Action<IUser[]> callback)
+        {
+            var users = new List<IUser>();
+            var tasks = usernames.Select(username => _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();
+
+            await Task.WhenAll(tasks);
+
+            foreach (var task in tasks)
+            {
+                var user = await task;
+                users.Add(user != null ? new UserDto(user) : null);
+            }
+
+            callback(users.ToArray());
         }
 
         #endregion

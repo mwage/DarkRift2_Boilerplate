@@ -9,7 +9,6 @@ namespace Database
         #region Login
 
         void GetUser(string username, Action<IUser> callback);
-        void GetUsers(string[] usernames, Action<IUser[]> callback);
         void UsernameAvailable(string username, Action<bool> callback);
         void AddNewUser(string username, string password, Action callback);
         void DeleteUser(string username, Action callback);
