@@ -149,7 +149,7 @@ namespace LoginPlugin
                                     // No user with that name found -> return error 3
                                     using (var writer = DarkRiftWriter.Create())
                                     {
-                                        writer.Write((byte)3);
+                                        writer.Write((byte) 3);
 
                                         using (var msg = Message.Create(RequestFailed, writer))
                                         {
@@ -170,7 +170,7 @@ namespace LoginPlugin
                                     // Users are already friends or have an open request -> return error 4
                                     using (var writer = DarkRiftWriter.Create())
                                     {
-                                        writer.Write((byte)4);
+                                        writer.Write((byte) 4);
 
                                         using (var msg = Message.Create(RequestFailed, writer))
                                         {
@@ -461,6 +461,7 @@ namespace LoginPlugin
                                     writer.Write(senderName);
 
                                     foreach (var friend in user.Friends)
+                                    {
                                         if (_loginPlugin.Clients.ContainsKey(friend))
                                         {
                                             onlineFriends.Add(friend);
@@ -477,6 +478,7 @@ namespace LoginPlugin
                                         {
                                             offlineFriends.Add(friend);
                                         }
+                                    }
                                 }
 
                                 using (var writer = DarkRiftWriter.Create())
@@ -513,26 +515,28 @@ namespace LoginPlugin
         {
             try
             {
-                 _database.DataLayer.GetUser(username, user =>
-                 {
-                     var friends = user.Friends;
-                     using (var writer = DarkRiftWriter.Create())
-                     {
-                         writer.Write(username);
+                _database.DataLayer.GetUser(username, user =>
+                {
+                    var friends = user.Friends;
+                    using (var writer = DarkRiftWriter.Create())
+                    {
+                        writer.Write(username);
 
-                         foreach (var friend in friends)
-                             if (_loginPlugin.Clients.ContainsKey(friend))
-                             {
-                                 // let online friends know he logged out
-                                 var client = _loginPlugin.Clients[friend];
+                        foreach (var friend in friends)
+                        {
+                            if (_loginPlugin.Clients.ContainsKey(friend))
+                            {
+                                // let online friends know he logged out
+                                var client = _loginPlugin.Clients[friend];
 
-                                 using (var msg = Message.Create(FriendLoggedOut, writer))
-                                 {
-                                     client.SendMessage(msg, SendMode.Reliable);
-                                 }
-                             }
-                     }
-                 });
+                                using (var msg = Message.Create(FriendLoggedOut, writer))
+                                {
+                                    client.SendMessage(msg, SendMode.Reliable);
+                                }
+                            }
+                        }
+                    }
+                });
             }
             catch (Exception ex)
             {

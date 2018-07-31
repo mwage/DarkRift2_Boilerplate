@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Database;
 using MongoDB.Driver;
@@ -25,6 +26,22 @@ namespace MongoDbConnector
             //Gets user data from the database and builds a User object to send back
             var user = await _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync();
             callback(user != null ? new UserDto(user) : null);
+        }
+
+        public async void GetUsers(string[] usernames, Action<IUser[]> callback)
+        {
+            var users = new List<IUser>();
+            var tasks = usernames.Select(username => _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();
+
+            await Task.WhenAll(tasks);
+
+            foreach (var task in tasks)
+            {
+                var user = await task;
+                users.Add(user != null ? new UserDto(user) : null);
+            }
+
+            callback(users.ToArray());
         }
 
         public async void UsernameAvailable(string username, Action<bool> callback)
@@ -95,55 +112,55 @@ namespace MongoDbConnector
 
         public void RemoveFriend(string sender, string receiver, Action callback)
         {
-            GetUser(sender, senderUser =>
+            GetUsers(new[] {sender, receiver}, async users =>
             {
-                GetUser(receiver, async receiverUser =>
+                var senderUser = users.Single(u => u.Username == sender);
+                var receiverUser = users.Single(u => u.Username == receiver);
+
+                var tasks = new List<Task>();
+
+                //Update sender
+                if (senderUser.Friends.Contains(receiver))
                 {
-                    var tasks = new List<Task>();
+                    //remove receiver from senders friend list
+                    var updateSender = Builders<User>.Update.Pull(u => u.Friends, receiver);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                }
+                if (senderUser.OpenFriendRequests.Contains(receiver))
+                {
+                    //remove receiver from senders open friend requests
+                    var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                }
+                if (senderUser.UnansweredFriendRequests.Contains(receiver))
+                {
+                    // remove receiver from senders unanswered friend requests
+                    var updateSender = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, receiver);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                }
 
-                    //Update sender
-                    if (senderUser.Friends.Contains(receiver))
-                    {
-                        //remove receiver from senders friend list
-                        var updateSender = Builders<User>.Update.Pull(u => u.Friends, receiver);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
-                    }
-                    if (senderUser.OpenFriendRequests.Contains(receiver))
-                    {
-                        //remove receiver from senders open friend requests
-                        var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
-                    }
-                    if (senderUser.UnansweredFriendRequests.Contains(receiver))
-                    {
-                        // remove receiver from senders unanswered friend requests
-                        var updateSender = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, receiver);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
-                    }
+                //Update receiver
+                if (receiverUser.Friends.Contains(sender))
+                {
+                    //remove sender from receivers friend list
+                    var updateReceiver = Builders<User>.Update.Pull(u => u.Friends, sender);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                }
+                if (receiverUser.OpenFriendRequests.Contains(sender))
+                {
+                    //remove sender from receivers open friend requests
+                    var updateReceiver = Builders<User>.Update.Pull(u => u.OpenFriendRequests, sender);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                }
+                if (receiverUser.UnansweredFriendRequests.Contains(sender))
+                {
+                    //remove sender from receivers unanswered friend requests
+                    var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
+                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                }
 
-                    //Update receiver
-                    if (receiverUser.Friends.Contains(sender))
-                    {
-                        //remove sender from receivers friend list
-                        var updateReceiver = Builders<User>.Update.Pull(u => u.Friends, sender);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
-                    }
-                    if (receiverUser.OpenFriendRequests.Contains(sender))
-                    {
-                        //remove sender from receivers open friend requests
-                        var updateReceiver = Builders<User>.Update.Pull(u => u.OpenFriendRequests, sender);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
-                    }
-                    if (receiverUser.UnansweredFriendRequests.Contains(sender))
-                    {
-                        //remove sender from receivers unanswered friend requests
-                        var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-                        tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
-                    }
-
-                    await Task.WhenAll(tasks);
-                    callback();
-                });
+                await Task.WhenAll(tasks);
+                callback();
             });
         }
 
