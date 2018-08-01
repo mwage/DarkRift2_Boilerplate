@@ -202,41 +202,42 @@ namespace LoginPlugin
 
                         try
                         {
-                            var user = _database.DataLayer.GetUser(username);
-
-                            if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
+                            _database.DataLayer.GetUser(username, user =>
                             {
-                                UsersLoggedIn[client] = username;
-                                Clients[username] = client;
-
-                                using (var msg = Message.CreateEmpty(LoginSuccess))
+                                if (user != null && BCrypt.Net.BCrypt.Verify(password, user.Password))
                                 {
-                                    client.SendMessage(msg, SendMode.Reliable);
-                                }
+                                    UsersLoggedIn[client] = username;
+                                    Clients[username] = client;
 
-                                if (_debug)
-                                {
-                                    WriteEvent("Successful login (" + client.ID + ").", LogType.Info);
-                                }
-                            }
-                            else
-                            {
-                                if (_debug)
-                                {
-                                    WriteEvent("User " + client.ID + " couldn't log in!", LogType.Info);
-                                }
-
-                                // Return Error 1 for "Wrong username/password combination"
-                                using (var writer = DarkRiftWriter.Create())
-                                {
-                                    writer.Write((byte) 1);
-
-                                    using (var msg = Message.Create(LoginFailed, writer))
+                                    using (var msg = Message.CreateEmpty(LoginSuccess))
                                     {
                                         client.SendMessage(msg, SendMode.Reliable);
                                     }
+
+                                    if (_debug)
+                                    {
+                                        WriteEvent("Successful login (" + client.ID + ").", LogType.Info);
+                                    }
                                 }
-                            }
+                                else
+                                {
+                                    if (_debug)
+                                    {
+                                        WriteEvent("User " + client.ID + " couldn't log in!", LogType.Info);
+                                    }
+
+                                    // Return Error 1 for "Wrong username/password combination"
+                                    using (var writer = DarkRiftWriter.Create())
+                                    {
+                                        writer.Write((byte) 1);
+
+                                        using (var msg = Message.Create(LoginFailed, writer))
+                                        {
+                                            client.SendMessage(msg, SendMode.Reliable);
+                                        }
+                                    }
+                                }
+                            });
                         }
                         catch (Exception ex)
                         {
@@ -297,38 +298,42 @@ namespace LoginPlugin
 
                         try
                         {
-                            if (_database.DataLayer.UsernameAvailable(username))
+                            _database.DataLayer.UsernameAvailable(username, isAvailable =>
                             {
-                                _database.DataLayer.AddNewUser(username, password);
-
-                                if (_debug)
+                                if (isAvailable)
                                 {
-                                    WriteEvent("New User: " + username, LogType.Info);
-                                }
-
-                                using (var msg = Message.CreateEmpty(AddUserSuccess))
-                                {
-                                    client.SendMessage(msg, SendMode.Reliable);
-                                }
-                            }
-                            else
-                            {
-                                if (_debug)
-                                {
-                                    WriteEvent("User " + client.ID + " failed to sign up!", LogType.Info);
-                                }
-
-                                // Return Error 1 for "Wrong username/password combination"
-                                using (var writer = DarkRiftWriter.Create())
-                                {
-                                    writer.Write((byte) 1);
-
-                                    using (var msg = Message.Create(AddUserFailed, writer))
+                                    _database.DataLayer.AddNewUser(username, password, () =>
                                     {
-                                        client.SendMessage(msg, SendMode.Reliable);
+                                        if (_debug)
+                                        {
+                                            WriteEvent("New User: " + username, LogType.Info);
+                                        }
+
+                                        using (var msg = Message.CreateEmpty(AddUserSuccess))
+                                        {
+                                            client.SendMessage(msg, SendMode.Reliable);
+                                        }
+                                    });
+                                }
+                                else
+                                {
+                                    if (_debug)
+                                    {
+                                        WriteEvent("User " + client.ID + " failed to sign up!", LogType.Info);
+                                    }
+
+                                    // Return Error 1 for "Wrong username/password combination"
+                                    using (var writer = DarkRiftWriter.Create())
+                                    {
+                                        writer.Write((byte) 1);
+
+                                        using (var msg = Message.Create(AddUserFailed, writer))
+                                        {
+                                            client.SendMessage(msg, SendMode.Reliable);
+                                        }
                                     }
                                 }
-                            }
+                            });
                         }
                         catch (Exception ex)
                         {
@@ -377,19 +382,23 @@ namespace LoginPlugin
 
             try
             {
-                if (_database.DataLayer.UsernameAvailable(username))
+                _database.DataLayer.UsernameAvailable(username, isAvailable =>
                 {
-                    _database.DataLayer.AddNewUser(username, password);
-
-                    if (_debug)
+                    if (isAvailable)
                     {
-                        WriteEvent("New User: " + username, LogType.Info);
+                        _database.DataLayer.AddNewUser(username, password, () =>
+                        {
+                            if (_debug)
+                            {
+                                WriteEvent("New User: " + username, LogType.Info);
+                            }
+                        });
                     }
-                }
-                else
-                {
-                    WriteEvent("Username already in use.", LogType.Warning);
-                }
+                    else
+                    {
+                        WriteEvent("Username already in use.", LogType.Warning);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -408,12 +417,13 @@ namespace LoginPlugin
 
             try
             {
-                _database.DataLayer.DeleteUser(username);
-
-                if (_debug)
+                _database.DataLayer.DeleteUser(username, () =>
                 {
-                    WriteEvent("Removed User: " + username, LogType.Info);
-                }
+                    if (_debug)
+                    {
+                        WriteEvent("Removed User: " + username, LogType.Info);
+                    }
+                });
             }
             catch (Exception ex)
             {
