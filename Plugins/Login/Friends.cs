@@ -324,45 +324,42 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users and add their names to their friend list
-                            _database.DataLayer.RemoveRequest(senderName, receiver, () =>
+                            _database.DataLayer.AddFriend(senderName, receiver, () =>
                             {
-                                _database.DataLayer.AddFriend(senderName, receiver, () =>
+                                var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
+
+                                using (var writer = DarkRiftWriter.Create())
                                 {
-                                    var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
+                                    writer.Write(receiver);
+                                    writer.Write(receiverOnline);
+
+                                    using (var msg = Message.Create(AcceptRequestSuccess, writer))
+                                    {
+                                        client.SendMessage(msg, SendMode.Reliable);
+                                    }
+                                }
+
+                                if (_debug)
+                                {
+                                    WriteEvent(senderName + " accepted " + receiver + "'s friend request.", LogType.Info);
+                                }
+
+                                // If Receiver is currently logged in, let him know right away
+                                if (receiverOnline)
+                                {
+                                    var receivingClient = _loginPlugin.Clients[receiver];
 
                                     using (var writer = DarkRiftWriter.Create())
                                     {
-                                        writer.Write(receiver);
-                                        writer.Write(receiverOnline);
+                                        writer.Write(senderName);
+                                        writer.Write(true);
 
                                         using (var msg = Message.Create(AcceptRequestSuccess, writer))
                                         {
-                                            client.SendMessage(msg, SendMode.Reliable);
+                                            receivingClient.SendMessage(msg, SendMode.Reliable);
                                         }
                                     }
-
-                                    if (_debug)
-                                    {
-                                        WriteEvent(senderName + " accepted " + receiver + "'s friend request.", LogType.Info);
-                                    }
-
-                                    // If Receiver is currently logged in, let him know right away
-                                    if (receiverOnline)
-                                    {
-                                        var receivingClient = _loginPlugin.Clients[receiver];
-
-                                        using (var writer = DarkRiftWriter.Create())
-                                        {
-                                            writer.Write(senderName);
-                                            writer.Write(true);
-
-                                            using (var msg = Message.Create(AcceptRequestSuccess, writer))
-                                            {
-                                                receivingClient.SendMessage(msg, SendMode.Reliable);
-                                            }
-                                        }
-                                    }
-                                });
+                                }
                             });
                         }
                         catch (Exception ex)

@@ -18,7 +18,7 @@ namespace MongoDbConnector
         }
 
         public string Name { get; }
-
+      
         #region Login
 
         public async void GetUser(string username, Action<IUser> callback)
@@ -27,7 +27,7 @@ namespace MongoDbConnector
             var user = await _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync();
             callback(user != null ? new UserDto(user) : null);
         }
-        
+
         public async void UsernameAvailable(string username, Action<bool> callback)
         {
             //Checks if a username is already taken
@@ -82,15 +82,24 @@ namespace MongoDbConnector
 
         public async void AddFriend(string sender, string receiver, Action callback)
         {
+            var tasks = new List<Task>();
             //Add sender to receivers friend list
             var updateReceiving = Builders<User>.Update.AddToSet(u => u.Friends, sender);
-            var task1 = _database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiving);
+            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiving));
 
             //Add receiver to senders friend list
             var updateSending = Builders<User>.Update.AddToSet(u => u.Friends, receiver);
-            var task2 = _database.Users.UpdateOneAsync(u => u.Username == sender, updateSending);
+            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSending));
 
-            await Task.WhenAll(task1, task2);
+            //Remove OpenFriendRequest of receiver from sender
+            var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
+            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+
+            //Remove OpenFriendRequest of sender from receiver
+            var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
+            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+
+            await Task.WhenAll(tasks);
             callback();
         }
 
