@@ -68,7 +68,7 @@ namespace MySQLConnector
                 "WHERE(user = @user AND request = @request)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
                 new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(sender)));
-            
+
             callback();
         }
 
@@ -88,24 +88,15 @@ namespace MySQLConnector
 
         public void RemoveFriend(string sender, string receiver, Action callback)
         {
-            _database.Log($"Sender: {sender}, Receiver: {receiver}");
             _database.ExecuteNonQuery(
                 "DELETE FROM Friends " +
-                "WHERE(user = @user AND friend = @friend)",
+                "WHERE(user = @user AND (friend = @friend OR request = @request)) " +
+                "OR (user = @notFriend AND friend = @isFriend)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
-                new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(receiver)));
-            _database.ExecuteNonQuery(
-                "DELETE FROM Friends " +
-                "WHERE(user = @user AND friend = @friend)",
-                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
-                new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(sender)));
-
-            //Delete canceled request
-            _database.ExecuteNonQuery(
-                "DELETE FROM Friends " +
-                "WHERE(user = @user AND request = @request)",
-                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
-                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)));
+                new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(receiver)),
+                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)),
+                new QueryParameter("@notFriend", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
+                new QueryParameter("@isFriend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(sender)));
             callback();
         }
 
