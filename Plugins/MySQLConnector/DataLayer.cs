@@ -53,8 +53,8 @@ namespace MySQLConnector
         public void AddRequest(string sender, string receiver, Action callback)
         {
             _database.ExecuteNonQuery(
-                "INSERT INTO Friends(sender, request) " +
-                "VALUES(@user, @receiver)",
+                "INSERT INTO Friends(user, request) " +
+                "VALUES(@user, @request)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
                 new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)));
             callback();
@@ -62,34 +62,50 @@ namespace MySQLConnector
 
         public void RemoveRequest(string sender, string receiver, Action callback)
         {
+            //Sender declined receivers request
             _database.ExecuteNonQuery(
                 "DELETE FROM Friends " +
-                "WHERE(user = @sender AND request = @request)",
-                new QueryParameter("@sender", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
-                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)));
+                "WHERE(user = @user AND request = @request)",
+                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
+                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(sender)));
+            
             callback();
         }
 
         public void AddFriend(string sender, string receiver, Action callback)
         {
+            //Sender accepted receivers request
             _database.ExecuteNonQuery(
                 "UPDATE Friends " +
                 "SET friend = @friend, request = NULL " +
                 "WHERE(user = @user AND request = @request)",
-                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
-                new QueryParameter("@friend", MySqlDbType.VarChar, 160, "friend", _database.EscapeString(receiver)),
-                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)));
+                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
+                new QueryParameter("@friend", MySqlDbType.VarChar, 160, "friend", _database.EscapeString(sender)),
+                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(sender)));
 
             callback();
         }
 
         public void RemoveFriend(string sender, string receiver, Action callback)
         {
+            _database.Log($"Sender: {sender}, Receiver: {receiver}");
             _database.ExecuteNonQuery(
                 "DELETE FROM Friends " +
                 "WHERE(user = @user AND friend = @friend)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
                 new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(receiver)));
+            _database.ExecuteNonQuery(
+                "DELETE FROM Friends " +
+                "WHERE(user = @user AND friend = @friend)",
+                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(receiver)),
+                new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(sender)));
+
+            //Delete canceled request
+            _database.ExecuteNonQuery(
+                "DELETE FROM Friends " +
+                "WHERE(user = @user AND request = @request)",
+                new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
+                new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(receiver)));
             callback();
         }
 
@@ -129,7 +145,7 @@ namespace MySQLConnector
                 }
             }
 
-            callback(new FriendList(friends, outRequests, inRequests));
+            callback(new FriendList(friends, inRequests, outRequests));
         }
     }
 }

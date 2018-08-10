@@ -65,6 +65,11 @@ namespace MySQLConnector
             }
         }
 
+        public void Log(string message)
+        {
+            WriteEvent(message, LogType.Warning);
+        }
+
         public void CreateTables()
         {
             const string userTable = "CREATE TABLE IF NOT EXISTS Users(" +
