@@ -67,15 +67,15 @@ namespace MySQLConnector
 
         public void CreateTables()
         {
-            const string userTable = "CREATE TABLE IF NOT EXISTS users(" +
+            const string userTable = "CREATE TABLE IF NOT EXISTS Users(" +
                                            "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
                                            "username VARCHAR(60) NOT NULL, " +
-                                           "password VARCHAR(60) NOT NULL ) ";
+                                           "password VARCHAR(255) NOT NULL ) ";
             const string friendsTable = "CREATE TABLE IF NOT EXISTS Friends(" +
                                      "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
                                      "user VARCHAR(60) NOT NULL, " +
-                                     "friend VARCHAR(60) NOT NULL, " +
-                                     "request VARCHAR(60) NOT NULL ) ";
+                                     "friend VARCHAR(60), " +
+                                     "request VARCHAR(60)) ";
 
             ExecuteNonQuery(userTable);
             ExecuteNonQuery(friendsTable);

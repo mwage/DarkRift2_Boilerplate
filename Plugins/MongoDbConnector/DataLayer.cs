@@ -174,7 +174,7 @@ namespace MongoDbConnector
 
         #region Helper
 
-        private async void GetFriendLists(string[] usernames, Action<FriendList[]> callback)
+        private async void GetFriendLists(IEnumerable<string> usernames, Action<FriendList[]> callback)
         {
             var friendLists = new List<FriendList>();
             var tasks = usernames.Select(username => _database.FriendLists.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();

@@ -20,24 +20,23 @@ namespace MySQLConnector
         public void GetUser(string username, Action<IUser> callback)
         {
             var row = _database.ExecuteQuery(
-                "SELECT ID, username, password FROM users WHERE username = @userName LIMIT 1;",
+                "SELECT ID, username, password FROM Users WHERE username = @userName LIMIT 1;",
                 new QueryParameter("@userName", MySqlDbType.VarChar, 60, "username", _database.EscapeString(username)));
-            callback(new User(Convert.ToString(row[0]["username"]), Convert.ToString(row[0]["password"]), null, null, null));
+            callback(new User(Convert.ToString(row[0]["username"]), Convert.ToString(row[0]["password"])));
         }
 
         public void UsernameAvailable(string username, Action<bool> callback)
         {
             var row = _database.ExecuteScalar(
-                "SELECT ID FROM users WHERE username = @userName",
+                "SELECT ID FROM Users WHERE username = @userName",
                 new QueryParameter("@userName", MySqlDbType.VarChar, 60, "username", _database.EscapeString(username)));
-            var isAvailable = row == null;
-            callback(isAvailable);
+            callback(row == null);
         }
 
         public void AddNewUser(string username, string password, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
-                "INSERT INTO users(username,password) VALUES(@userName,@pass)",
+            _database.ExecuteNonQuery(
+                "INSERT INTO Users(username,password) VALUES(@userName,@pass)",
                 new QueryParameter("@userName", MySqlDbType.VarChar, 60, "username", _database.EscapeString(username)),
                 new QueryParameter("@pass", MySqlDbType.VarChar, 255, "password", _database.EscapeString(password)));
             callback();
@@ -45,15 +44,15 @@ namespace MySQLConnector
 
         public void DeleteUser(string username, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
-                "DELETE FROM users WHERE username = @userName",
+            _database.ExecuteNonQuery(
+                "DELETE FROM Users WHERE username = @userName",
                 new QueryParameter("@userName", MySqlDbType.VarChar, 60, "username", _database.EscapeString(username)));
             callback();
         }
 
         public void AddRequest(string sender, string receiver, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
+            _database.ExecuteNonQuery(
                 "INSERT INTO Friends(sender, request) " +
                 "VALUES(@user, @receiver)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
@@ -63,7 +62,7 @@ namespace MySQLConnector
 
         public void RemoveRequest(string sender, string receiver, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
+            _database.ExecuteNonQuery(
                 "DELETE FROM Friends " +
                 "WHERE(user = @sender AND request = @request)",
                 new QueryParameter("@sender", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
@@ -73,7 +72,7 @@ namespace MySQLConnector
 
         public void AddFriend(string sender, string receiver, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
+            _database.ExecuteNonQuery(
                 "UPDATE Friends " +
                 "SET friend = @friend, request = NULL " +
                 "WHERE(user = @user AND request = @request)",
@@ -86,7 +85,7 @@ namespace MySQLConnector
 
         public void RemoveFriend(string sender, string receiver, Action callback)
         {
-            var row = _database.ExecuteNonQuery(
+            _database.ExecuteNonQuery(
                 "DELETE FROM Friends " +
                 "WHERE(user = @user AND friend = @friend)",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(sender)),
@@ -95,11 +94,6 @@ namespace MySQLConnector
         }
 
         public void GetFriends(string username, Action<IFriendList> callback)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void GetFriends(string username, Action<List<string>[]> callback)
         {
             var row = _database.ExecuteQuery(
                 "SELECT user, friend, request FROM Friends WHERE user = @user OR request = @request;",
@@ -134,9 +128,8 @@ namespace MySQLConnector
                     }
                 }
             }
-            List<string>[] friendsLists = {friends, outRequests, inRequests};
 
-            callback(friendsLists);
+            callback(new FriendList(friends, outRequests, inRequests));
         }
     }
 }
