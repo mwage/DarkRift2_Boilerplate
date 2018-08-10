@@ -29,4 +29,4 @@ Example: https://www.youtube.com/watch?v=IvHqSiPhJiM
 
 Hope this project is helpful. If you have any problems or find any bugs, let me know.
 
-Credits to @Wichenstaden for his help with the MySQL Connector and @Jamster for his input and ofc the awesome networking solution!
+Big thanks to Wichenstaden for his help with the MySQL Connector and to Jamster for his input and ofc the awesome networking solution!
