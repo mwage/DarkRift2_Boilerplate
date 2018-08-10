@@ -142,7 +142,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            _database.DataLayer.GetUser(receiver, receiverUser =>
+                            _database.DataLayer.GetFriends(receiver, receiverUser =>
                             {
                                 if (receiverUser == null)
                                 {
@@ -324,45 +324,42 @@ namespace LoginPlugin
                         try
                         {
                             // Delete the request from the database for both users and add their names to their friend list
-                            _database.DataLayer.RemoveRequest(senderName, receiver, () =>
+                            _database.DataLayer.AddFriend(senderName, receiver, () =>
                             {
-                                _database.DataLayer.AddFriend(senderName, receiver, () =>
+                                var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
+
+                                using (var writer = DarkRiftWriter.Create())
                                 {
-                                    var receiverOnline = _loginPlugin.Clients.ContainsKey(receiver);
+                                    writer.Write(receiver);
+                                    writer.Write(receiverOnline);
+
+                                    using (var msg = Message.Create(AcceptRequestSuccess, writer))
+                                    {
+                                        client.SendMessage(msg, SendMode.Reliable);
+                                    }
+                                }
+
+                                if (_debug)
+                                {
+                                    WriteEvent(senderName + " accepted " + receiver + "'s friend request.", LogType.Info);
+                                }
+
+                                // If Receiver is currently logged in, let him know right away
+                                if (receiverOnline)
+                                {
+                                    var receivingClient = _loginPlugin.Clients[receiver];
 
                                     using (var writer = DarkRiftWriter.Create())
                                     {
-                                        writer.Write(receiver);
-                                        writer.Write(receiverOnline);
+                                        writer.Write(senderName);
+                                        writer.Write(true);
 
                                         using (var msg = Message.Create(AcceptRequestSuccess, writer))
                                         {
-                                            client.SendMessage(msg, SendMode.Reliable);
+                                            receivingClient.SendMessage(msg, SendMode.Reliable);
                                         }
                                     }
-
-                                    if (_debug)
-                                    {
-                                        WriteEvent(senderName + " accepted " + receiver + "'s friend request.", LogType.Info);
-                                    }
-
-                                    // If Receiver is currently logged in, let him know right away
-                                    if (receiverOnline)
-                                    {
-                                        var receivingClient = _loginPlugin.Clients[receiver];
-
-                                        using (var writer = DarkRiftWriter.Create())
-                                        {
-                                            writer.Write(senderName);
-                                            writer.Write(true);
-
-                                            using (var msg = Message.Create(AcceptRequestSuccess, writer))
-                                            {
-                                                receivingClient.SendMessage(msg, SendMode.Reliable);
-                                            }
-                                        }
-                                    }
-                                });
+                                }
                             });
                         }
                         catch (Exception ex)
@@ -451,7 +448,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            _database.DataLayer.GetUser(senderName, user =>
+                            _database.DataLayer.GetFriends(senderName, friendList =>
                             {
                                 var onlineFriends = new List<string>();
                                 var offlineFriends = new List<string>();
@@ -460,7 +457,7 @@ namespace LoginPlugin
                                 {
                                     writer.Write(senderName);
 
-                                    foreach (var friend in user.Friends)
+                                    foreach (var friend in friendList.Friends)
                                     {
                                         if (_loginPlugin.Clients.ContainsKey(friend))
                                         {
@@ -485,8 +482,8 @@ namespace LoginPlugin
                                 {
                                     writer.Write(onlineFriends.ToArray());
                                     writer.Write(offlineFriends.ToArray());
-                                    writer.Write(user.OpenFriendRequests.ToArray());
-                                    writer.Write(user.UnansweredFriendRequests.ToArray());
+                                    writer.Write(friendList.OpenFriendRequests.ToArray());
+                                    writer.Write(friendList.UnansweredFriendRequests.ToArray());
 
                                     using (var msg = Message.Create(GetAllFriends, writer))
                                     {
@@ -515,9 +512,9 @@ namespace LoginPlugin
         {
             try
             {
-                _database.DataLayer.GetUser(username, user =>
+                _database.DataLayer.GetFriends(username, friendList =>
                 {
-                    var friends = user.Friends;
+                    var friends = friendList.Friends;
                     using (var writer = DarkRiftWriter.Create())
                     {
                         writer.Write(username);

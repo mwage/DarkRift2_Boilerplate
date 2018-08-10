@@ -1,11 +1,10 @@
-﻿using Database;
-using MongoDB.Bson.Serialization.Attributes;
+﻿using System.Collections.Generic;
+using Database;
 
-namespace MongoDbConnector
+namespace MySQLConnector
 {
-    public class User : IUser
+    internal class User : IUser
     {
-        [BsonId]
         public string Username { get; }
         public string Password { get; }
 

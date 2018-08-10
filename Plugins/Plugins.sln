@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Databa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDbConnector", "MongoDbConnector\MongoDbConnector.csproj", "{B71DBA54-D129-4744-B838-7C045B4A87C3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySQLConnector", "MySQLConnector\MySQLConnector.csproj", "{F022F9B3-B1E0-4774-9DB5-708DAC5F4886}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{B71DBA54-D129-4744-B838-7C045B4A87C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B71DBA54-D129-4744-B838-7C045B4A87C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B71DBA54-D129-4744-B838-7C045B4A87C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F022F9B3-B1E0-4774-9DB5-708DAC5F4886}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F022F9B3-B1E0-4774-9DB5-708DAC5F4886}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F022F9B3-B1E0-4774-9DB5-708DAC5F4886}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F022F9B3-B1E0-4774-9DB5-708DAC5F4886}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
