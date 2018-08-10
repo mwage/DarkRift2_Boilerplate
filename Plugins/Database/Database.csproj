@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="DatabaseProxy.cs" />
     <Compile Include="IDataLayer.cs" />
+    <Compile Include="IFriendList.cs" />
     <Compile Include="IUser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

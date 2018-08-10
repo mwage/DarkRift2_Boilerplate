@@ -18,6 +18,7 @@ namespace MongoDbConnector
         };
 
         public IMongoCollection<User> Users { get; private set; }
+        public IMongoCollection<FriendList> FriendLists { get; private set; }
 
         private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
         private static readonly object InitializeLock = new object();
@@ -91,6 +92,7 @@ namespace MongoDbConnector
         private void GetCollections()
         {
             Users = _mongoDatabase.GetCollection<User>("users");
+            FriendLists = _mongoDatabase.GetCollection<FriendList>("friendLists");
         }
 
         //If you have DR2 Pro, use the Plugin.Loaded() method instead of this

@@ -142,7 +142,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            _database.DataLayer.GetUser(receiver, receiverUser =>
+                            _database.DataLayer.GetFriends(receiver, receiverUser =>
                             {
                                 if (receiverUser == null)
                                 {
@@ -448,7 +448,7 @@ namespace LoginPlugin
 
                         try
                         {
-                            _database.DataLayer.GetUser(senderName, user =>
+                            _database.DataLayer.GetFriends(senderName, friendList =>
                             {
                                 var onlineFriends = new List<string>();
                                 var offlineFriends = new List<string>();
@@ -457,7 +457,7 @@ namespace LoginPlugin
                                 {
                                     writer.Write(senderName);
 
-                                    foreach (var friend in user.Friends)
+                                    foreach (var friend in friendList.Friends)
                                     {
                                         if (_loginPlugin.Clients.ContainsKey(friend))
                                         {
@@ -482,8 +482,8 @@ namespace LoginPlugin
                                 {
                                     writer.Write(onlineFriends.ToArray());
                                     writer.Write(offlineFriends.ToArray());
-                                    writer.Write(user.OpenFriendRequests.ToArray());
-                                    writer.Write(user.UnansweredFriendRequests.ToArray());
+                                    writer.Write(friendList.OpenFriendRequests.ToArray());
+                                    writer.Write(friendList.UnansweredFriendRequests.ToArray());
 
                                     using (var msg = Message.Create(GetAllFriends, writer))
                                     {
@@ -512,9 +512,9 @@ namespace LoginPlugin
         {
             try
             {
-                _database.DataLayer.GetUser(username, user =>
+                _database.DataLayer.GetFriends(username, friendList =>
                 {
-                    var friends = user.Friends;
+                    var friends = friendList.Friends;
                     using (var writer = DarkRiftWriter.Create())
                     {
                         writer.Write(username);

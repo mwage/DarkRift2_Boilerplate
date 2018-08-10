@@ -25,7 +25,7 @@ namespace MongoDbConnector
         {
             //Gets user data from the database and builds a User object to send back
             var user = await _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync();
-            callback(user != null ? new UserDto(user) : null);
+            callback(user);
         }
 
         public async void UsernameAvailable(string username, Action<bool> callback)
@@ -38,6 +38,7 @@ namespace MongoDbConnector
         {
             //Add a new user to the database
             await _database.Users.InsertOneAsync(new User(username, password));
+            await _database.FriendLists.InsertOneAsync(new FriendList(username));
             callback();
         }
 
@@ -55,12 +56,12 @@ namespace MongoDbConnector
         public async void AddRequest(string sender, string receiver, Action callback)
         {
             //Add OpenFriendRequest of sender to receiver
-            var updateReceiving = Builders<User>.Update.AddToSet(u => u.OpenFriendRequests, sender);
-            var task1 = _database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiving);
+            var updateReceiving = Builders<FriendList>.Update.AddToSet(u => u.OpenFriendRequests, sender);
+            var task1 = _database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiving);
 
             //Add OpenFriendRequest of receiver to sender
-            var updateSender = Builders<User>.Update.AddToSet(u => u.UnansweredFriendRequests, receiver);
-            var task2 = _database.Users.UpdateOneAsync(u => u.Username == sender, updateSender);
+            var updateSender = Builders<FriendList>.Update.AddToSet(u => u.UnansweredFriendRequests, receiver);
+            var task2 = _database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender);
 
             await Task.WhenAll(task1, task2);
             callback();
@@ -69,12 +70,12 @@ namespace MongoDbConnector
         public async void RemoveRequest(string sender, string receiver, Action callback)
         {
             //Remove OpenFriendRequest of receiver from sender
-            var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-            var task1 = _database.Users.UpdateOneAsync(u => u.Username == sender, updateSender);
+            var updateSender = Builders<FriendList>.Update.Pull(u => u.OpenFriendRequests, receiver);
+            var task1 = _database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender);
 
             //Remove OpenFriendRequest of sender from receiver
-            var updateReceiving = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-            var task2 = _database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiving);
+            var updateReceiving = Builders<FriendList>.Update.Pull(u => u.UnansweredFriendRequests, sender);
+            var task2 = _database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiving);
 
             await Task.WhenAll(task1, task2);
             callback();
@@ -84,20 +85,20 @@ namespace MongoDbConnector
         {
             var tasks = new List<Task>();
             //Add sender to receivers friend list
-            var updateReceiving = Builders<User>.Update.AddToSet(u => u.Friends, sender);
-            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiving));
+            var updateReceiving = Builders<FriendList>.Update.AddToSet(u => u.Friends, sender);
+            tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiving));
 
             //Add receiver to senders friend list
-            var updateSending = Builders<User>.Update.AddToSet(u => u.Friends, receiver);
-            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSending));
+            var updateSending = Builders<FriendList>.Update.AddToSet(u => u.Friends, receiver);
+            tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSending));
 
             //Remove OpenFriendRequest of receiver from sender
-            var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+            var updateSender = Builders<FriendList>.Update.Pull(u => u.OpenFriendRequests, receiver);
+            tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender));
 
             //Remove OpenFriendRequest of sender from receiver
-            var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-            tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+            var updateReceiver = Builders<FriendList>.Update.Pull(u => u.UnansweredFriendRequests, sender);
+            tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
 
             await Task.WhenAll(tasks);
             callback();
@@ -105,10 +106,10 @@ namespace MongoDbConnector
 
         public void RemoveFriend(string sender, string receiver, Action callback)
         {
-            GetUsers(new[] {sender, receiver}, async users =>
+            GetFriendLists(new[] {sender, receiver}, async friendLists =>
             {
-                var senderUser = users.Single(u => u.Username == sender);
-                var receiverUser = users.Single(u => u.Username == receiver);
+                var senderUser = friendLists.Single(u => u.Username == sender);
+                var receiverUser = friendLists.Single(u => u.Username == receiver);
 
                 var tasks = new List<Task>();
 
@@ -116,40 +117,40 @@ namespace MongoDbConnector
                 if (senderUser.Friends.Contains(receiver))
                 {
                     //remove receiver from senders friend list
-                    var updateSender = Builders<User>.Update.Pull(u => u.Friends, receiver);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                    var updateSender = Builders<FriendList>.Update.Pull(u => u.Friends, receiver);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender));
                 }
                 if (senderUser.OpenFriendRequests.Contains(receiver))
                 {
                     //remove receiver from senders open friend requests
-                    var updateSender = Builders<User>.Update.Pull(u => u.OpenFriendRequests, receiver);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                    var updateSender = Builders<FriendList>.Update.Pull(u => u.OpenFriendRequests, receiver);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender));
                 }
                 if (senderUser.UnansweredFriendRequests.Contains(receiver))
                 {
                     // remove receiver from senders unanswered friend requests
-                    var updateSender = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, receiver);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == sender, updateSender));
+                    var updateSender = Builders<FriendList>.Update.Pull(u => u.UnansweredFriendRequests, receiver);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == sender, updateSender));
                 }
 
                 //Update receiver
                 if (receiverUser.Friends.Contains(sender))
                 {
                     //remove sender from receivers friend list
-                    var updateReceiver = Builders<User>.Update.Pull(u => u.Friends, sender);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                    var updateReceiver = Builders<FriendList>.Update.Pull(u => u.Friends, sender);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
                 }
                 if (receiverUser.OpenFriendRequests.Contains(sender))
                 {
                     //remove sender from receivers open friend requests
-                    var updateReceiver = Builders<User>.Update.Pull(u => u.OpenFriendRequests, sender);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                    var updateReceiver = Builders<FriendList>.Update.Pull(u => u.OpenFriendRequests, sender);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
                 }
                 if (receiverUser.UnansweredFriendRequests.Contains(sender))
                 {
                     //remove sender from receivers unanswered friend requests
-                    var updateReceiver = Builders<User>.Update.Pull(u => u.UnansweredFriendRequests, sender);
-                    tasks.Add(_database.Users.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
+                    var updateReceiver = Builders<FriendList>.Update.Pull(u => u.UnansweredFriendRequests, sender);
+                    tasks.Add(_database.FriendLists.UpdateOneAsync(u => u.Username == receiver, updateReceiver));
                 }
 
                 await Task.WhenAll(tasks);
@@ -157,24 +158,36 @@ namespace MongoDbConnector
             });
         }
 
+        public async void GetFriends(string username, Action<IFriendList> callback)
+        {
+            //Gets friendlist data from the database and builds a User object to send back
+            var friendList = await _database.FriendLists.Find(u => u.Username == username).FirstOrDefaultAsync();
+            if (friendList == null)
+            {
+                await _database.FriendLists.InsertOneAsync(new FriendList(username));
+                friendList = new FriendList(username);
+            }
+            callback(new FriendListDto(friendList));
+        }
+
         #endregion
 
         #region Helper
 
-        private async void GetUsers(string[] usernames, Action<IUser[]> callback)
+        private async void GetFriendLists(string[] usernames, Action<FriendList[]> callback)
         {
-            var users = new List<IUser>();
-            var tasks = usernames.Select(username => _database.Users.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();
+            var friendLists = new List<FriendList>();
+            var tasks = usernames.Select(username => _database.FriendLists.Find(u => u.Username == username).FirstOrDefaultAsync()).ToList();
 
             await Task.WhenAll(tasks);
 
             foreach (var task in tasks)
             {
-                var user = await task;
-                users.Add(user != null ? new UserDto(user) : null);
+                var friendList = await task;
+                friendLists.Add(friendList);
             }
 
-            callback(users.ToArray());
+            callback(friendLists.ToArray());
         }
 
         #endregion

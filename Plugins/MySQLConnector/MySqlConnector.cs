@@ -14,7 +14,7 @@ namespace MySQLConnector
         public override Version Version => new Version(1, 0, 0);
         public override bool ThreadSafe => false;
 
-        private const string ConfigPath = @"Plugins\MySQLConnector.xml";
+        private const string ConfigPath = @"Plugins/MySQLConnector.xml";
         private readonly string _connectionString;
         private DatabaseProxy _database;
         private readonly DataLayer _dataLayer;
@@ -23,6 +23,7 @@ namespace MySQLConnector
         public MySqlConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
             _connectionString = LoadConfig();
+            CreateTables();
             _dataLayer = new DataLayer("MySQL", this);
 
             ClientManager.ClientConnected += OnPlayerConnected;
@@ -68,13 +69,19 @@ namespace MySQLConnector
         {
             const string userTable = "CREATE TABLE IF NOT EXISTS users(" +
                                            "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
-                                           "username VARCHAR(50) NOT NULL, " +
-                                           "password VARCHAR(50) NOT NULL ) ";
+                                           "username VARCHAR(60) NOT NULL, " +
+                                           "password VARCHAR(60) NOT NULL ) ";
+            const string friendsTable = "CREATE TABLE IF NOT EXISTS Friends(" +
+                                     "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
+                                     "user VARCHAR(60) NOT NULL, " +
+                                     "friend VARCHAR(60) NOT NULL, " +
+                                     "request VARCHAR(60) NOT NULL ) ";
 
             ExecuteNonQuery(userTable);
+            ExecuteNonQuery(friendsTable);
         }
 
-        public void ExecuteNonQuery(string query, params QueryParameter[] parameters)
+        public object ExecuteNonQuery(string query, params QueryParameter[] parameters)
         {
             try
             {
@@ -84,17 +91,18 @@ namespace MySQLConnector
                     {
                         foreach (var parameter in parameters)
                         {
-                            command.Parameters.AddWithValue(parameter.ParameterName, parameter.Value);
+                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
                         }
 
                         connection.Open();
-                        command.ExecuteNonQuery();
+                        return command.ExecuteNonQuery();
                     }
                 }
             }
             catch (MySqlException e)
             {
                 WriteEvent($"Failed to execute NonQuery! \n{e.Message}\n{e.StackTrace}", LogType.Error);
+                return null;
             }
         }
 
@@ -108,7 +116,7 @@ namespace MySQLConnector
                     {
                         foreach (var parameter in parameters)
                         {
-                            command.Parameters.AddWithValue(parameter.ParameterName, parameter.Value);
+                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
                         }
 
                         connection.Open();
@@ -133,7 +141,7 @@ namespace MySQLConnector
                     {
                         foreach (var parameter in parameters)
                         {
-                            command.Parameters.AddWithValue(parameter.ParameterName, parameter.Value);
+                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
                         }
 
                         connection.Open();

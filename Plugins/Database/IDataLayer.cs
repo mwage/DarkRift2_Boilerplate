@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Database
 {
@@ -21,6 +22,7 @@ namespace Database
         void RemoveRequest(string sender, string receiver, Action callback);
         void AddFriend(string sender, string receiver, Action callback);
         void RemoveFriend(string sender, string receiver, Action callback);
+        void GetFriends(string username, Action<IFriendList> callback);
 
         #endregion
     }
