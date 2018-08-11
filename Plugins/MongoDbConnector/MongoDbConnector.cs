@@ -58,8 +58,7 @@ namespace MongoDbConnector
             {
                 document = new XDocument(new XDeclaration("1.0", "utf-8", "yes"),
                     new XComment("Enter your connection data here:"),
-                    new XElement("MongoDB", new XAttribute("ConnectionString", "mongodb://localhost:27017"), new XAttribute("Database", "test"),
-                        new XAttribute("LoginDelay", 15)));
+                    new XElement("MongoDB", new XAttribute("ConnectionString", "mongodb://localhost:27017"), new XAttribute("Database", "test")));
                 try
                 {
                     document.Save(ConfigPath);
