@@ -40,7 +40,7 @@ namespace ChatPlugin
         private const ushort GetActiveGroups = 9 + Shift;
         private const ushort GetActiveGroupsFailed = 10 + Shift;
 
-        private const string ConfigPath = @"Plugins\Chat.xml";
+        private const string ConfigPath = @"Plugins/Chat.xml";
         private static readonly object InitializeLock = new object();
         private bool _debug = true;
         private Login _loginPlugin;

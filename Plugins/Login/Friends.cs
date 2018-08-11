@@ -41,7 +41,7 @@ namespace LoginPlugin
         private const ushort FriendLoggedIn = 14 + Shift;
         private const ushort FriendLoggedOut = 15 + Shift;
 
-        private const string ConfigPath = @"Plugins\Friends.xml";
+        private const string ConfigPath = @"Plugins/Friends.xml";
         private static readonly object InitializeLock = new object();
         private DatabaseProxy _database;
         private bool _debug = true;

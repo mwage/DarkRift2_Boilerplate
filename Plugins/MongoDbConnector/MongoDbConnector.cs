@@ -20,7 +20,7 @@ namespace MongoDbConnector
         public IMongoCollection<User> Users { get; private set; }
         public IMongoCollection<FriendList> FriendLists { get; private set; }
 
-        private const string ConfigPath = @"Plugins\MongoDbConnector.xml";
+        private const string ConfigPath = @"Plugins/MongoDbConnector.xml";
         private static readonly object InitializeLock = new object();
         private readonly DataLayer _dataLayer;
         private readonly IMongoDatabase _mongoDatabase;
@@ -29,13 +29,13 @@ namespace MongoDbConnector
         public MongoDbConnector(PluginLoadData pluginLoadData) : base(pluginLoadData)
         {
             //Read Connectionstring from Config
-            var connectionString = LoadConfig();
+            LoadConfig(out var connectionString, out var database);
 
             //Set up MongoDB
             try
             {
                 var client = new MongoClient(connectionString);
-                _mongoDatabase = client.GetDatabase("test");
+                _mongoDatabase = client.GetDatabase(database);
                 GetCollections();
             }
             catch (Exception ex)
@@ -50,28 +50,32 @@ namespace MongoDbConnector
         }
 
         //Get Connection String
-        private string LoadConfig()
+        private void LoadConfig(out string connectionString, out string database)
         {
             XDocument document;
 
             if (!File.Exists(ConfigPath))
             {
                 document = new XDocument(new XDeclaration("1.0", "utf-8", "yes"),
-                    new XComment("Insert your ConnectionString below!"),
-                    new XElement("ConnectionString", "mongodb://localhost:27017"));
+                    new XComment("Enter your connection data here:"),
+                    new XElement("MongoDB", new XAttribute("ConnectionString", "mongodb://localhost:27017"), new XAttribute("Database", "test"),
+                        new XAttribute("LoginDelay", 15)));
                 try
                 {
                     document.Save(ConfigPath);
                     WriteEvent(
                         "Created /Plugins/DbConnector.xml. Please adjust your connection string and restart the server!",
                         LogType.Info);
-                    return "mongodb://localhost:27017";
+                    connectionString = "mongodb://localhost:27017";
+                    database = "test";
                 }
                 catch (Exception ex)
                 {
                     WriteEvent("Failed to create DbConnector.xml: " + ex.Message + " - " + ex.StackTrace,
                         LogType.Error);
-                    return null;
+                    connectionString = null;
+                    database = null;
+                    return;
                 }
             }
 
@@ -79,12 +83,14 @@ namespace MongoDbConnector
             {
                 document = XDocument.Load(ConfigPath);
 
-                return document.Element("ConnectionString").Value;
+                connectionString = document.Element("MongoDB").Attribute("ConnectionString").Value;
+                database = document.Element("MongoDB").Attribute("Database").Value;
             }
             catch (Exception ex)
             {
                 WriteEvent("Failed to load DbConnector.xml: " + ex.Message + " - " + ex.StackTrace, LogType.Error);
-                return null;
+                connectionString = null;
+                database = null;
             }
         }
 
@@ -121,7 +127,6 @@ namespace MongoDbConnector
                     if (_database == null)
                     {
                         _database = PluginManager.GetPluginByType<DatabaseProxy>();
-                        
                     }
                 }
             }

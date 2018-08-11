@@ -41,7 +41,7 @@ namespace RoomSystemPlugin
         private const ushort StartGameSuccess = 13 + Shift;
         private const ushort StartGameFailed = 14 + Shift;
 
-        private const string ConfigPath = @"Plugins\RoomSystem.xml";
+        private const string ConfigPath = @"Plugins/RoomSystem.xml";
         private static readonly object InitializeLock = new object();
         private readonly ConcurrentDictionary<uint, Room> _playersInRooms = new ConcurrentDictionary<uint, Room>();
         private bool _debug = true;

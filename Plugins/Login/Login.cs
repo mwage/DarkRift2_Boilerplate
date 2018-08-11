@@ -45,8 +45,8 @@ namespace LoginPlugin
         private const ushort AddUserSuccess = 6 + Shift;
         private const ushort AddUserFailed = 7 + Shift;
 
-        private const string ConfigPath = @"Plugins\Login.xml";
-        private const string PrivateKeyPath = @"Plugins\PrivateKey.xml";
+        private const string ConfigPath = @"Plugins/Login.xml";
+        private const string PrivateKeyPath = @"Plugins/PrivateKey.xml";
         private static readonly object InitializeLock = new object();
         private bool _allowAddUser = true;
         private DatabaseProxy _database;
