@@ -29,7 +29,7 @@ namespace MySQLConnector
             ClientManager.ClientConnected += OnPlayerConnected;
         }
 
-        // Get Connection String (alternatively, load them via DarkRifts <databases> elements in Server.config)
+        // Get Connection String (alternatively, set them via DarkRifts <databases> elements in Server.config and retrieve it with DatabaseManager)
         private string LoadConfig()
         {
             XDocument document;
