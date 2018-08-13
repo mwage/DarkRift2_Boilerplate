@@ -72,116 +72,100 @@ namespace MySQLConnector
 
         public void CreateTables()
         {
-            const string userTable = "CREATE TABLE IF NOT EXISTS Users(" +
-                                           "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
-                                           "username VARCHAR(60) NOT NULL, " +
-                                           "password VARCHAR(255) NOT NULL ) ";
-            const string friendsTable = "CREATE TABLE IF NOT EXISTS Friends(" +
-                                     "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
-                                     "user VARCHAR(60) NOT NULL, " +
-                                     "friend VARCHAR(60), " +
-                                     "request VARCHAR(60)) ";
+            try
+            {
+                const string userTable = "CREATE TABLE IF NOT EXISTS Users(" +
+                                         "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
+                                         "username VARCHAR(60) NOT NULL, " +
+                                         "password VARCHAR(255) NOT NULL ) ";
+                const string friendsTable = "CREATE TABLE IF NOT EXISTS Friends(" +
+                                            "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, " +
+                                            "user VARCHAR(60) NOT NULL, " +
+                                            "friend VARCHAR(60), " +
+                                            "request VARCHAR(60)) ";
 
-            ExecuteNonQuery(userTable);
-            ExecuteNonQuery(friendsTable);
+                ExecuteNonQuery(userTable);
+                ExecuteNonQuery(friendsTable);
+            }
+            catch (Exception e)
+            {
+                WriteEvent("Database Error: " + e.Message + " - " + e.StackTrace, LogType.Error);
+            }
+       
         }
 
         public object ExecuteNonQuery(string query, params QueryParameter[] parameters)
         {
-            try
+            using (var connection = new MySqlConnection(_connectionString))
             {
-                using (var connection = new MySqlConnection(_connectionString))
+                using (var command = new MySqlCommand(query, connection))
                 {
-                    using (var command = new MySqlCommand(query, connection))
+                    foreach (var parameter in parameters)
                     {
-                        foreach (var parameter in parameters)
-                        {
-                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
-                        }
-
-                        connection.Open();
-                        return command.ExecuteNonQuery();
+                        command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
                     }
+
+                    connection.Open();
+                    return command.ExecuteNonQuery();
                 }
-            }
-            catch (MySqlException e)
-            {
-                WriteEvent($"Failed to execute NonQuery! \n{e.Message}\n{e.StackTrace}", LogType.Error);
-                return null;
             }
         }
 
         public object ExecuteScalar(string query, params QueryParameter[] parameters)
         {
-            try
+            using (var connection = new MySqlConnection(_connectionString))
             {
-                using (var connection = new MySqlConnection(_connectionString))
+                using (var command = new MySqlCommand(query, connection))
                 {
-                    using (var command = new MySqlCommand(query, connection))
+                    foreach (var parameter in parameters)
                     {
-                        foreach (var parameter in parameters)
-                        {
-                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
-                        }
-
-                        connection.Open();
-                        return command.ExecuteScalar();
+                        command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
                     }
+
+                    connection.Open();
+                    return command.ExecuteScalar();
                 }
-            }
-            catch (MySqlException e)
-            {
-                WriteEvent($"Failed to execute ScalarQuery! \n{e.Message}\n{e.StackTrace}", LogType.Error);
-                return null;
             }
         }
 
         public DatabaseRow[] ExecuteQuery(string query, params QueryParameter[] parameters)
         {
-            try
+            using (var connection = new MySqlConnection(_connectionString))
             {
-                using (var connection = new MySqlConnection(_connectionString))
+                using (var command = new MySqlCommand(query, connection))
                 {
-                    using (var command = new MySqlCommand(query, connection))
+                    foreach (var parameter in parameters)
                     {
-                        foreach (var parameter in parameters)
-                        {
-                            command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
-                        }
+                        command.Parameters.Add(parameter.ParameterName, parameter.FieldType, parameter.Size, parameter.Column).Value = parameter.Value;
+                    }
 
-                        connection.Open();
-                        using (var reader = command.ExecuteReader())
-                        {
-                            var fieldCount = reader.FieldCount;
-                            var rows = new List<DatabaseRow>();
+                    connection.Open();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        var fieldCount = reader.FieldCount;
+                        var rows = new List<DatabaseRow>();
 
-                            while (reader.Read())
+                        while (reader.Read())
+                        {
+                            //For each row create a DatabaseRow
+                            var row = new DatabaseRow();
+
+                            //And add each field to it
+                            for (var i = 0; i < fieldCount; i++)
                             {
-                                //For each row create a DatabaseRow
-                                var row = new DatabaseRow();
-
-                                //And add each field to it
-                                for (var i = 0; i < fieldCount; i++)
-                                {
-                                    row.Add(
-                                        reader.GetName(i),
-                                        reader.GetValue(i)
-                                    );
-                                }
-
-                                //Add it to the rows
-                                rows.Add(row);
+                                row.Add(
+                                    reader.GetName(i),
+                                    reader.GetValue(i)
+                                );
                             }
 
-                            return rows.ToArray();
+                            //Add it to the rows
+                            rows.Add(row);
                         }
+
+                        return rows.ToArray();
                     }
                 }
-            }
-            catch (MySqlException e)
-            {
-                WriteEvent($"Failed to execute Query! \n{e.Message}\n{e.StackTrace}", LogType.Error);
-                return null;
             }
         }
 
