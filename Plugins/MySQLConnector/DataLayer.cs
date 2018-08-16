@@ -102,9 +102,10 @@ namespace MySQLConnector
 
         public void GetFriends(string username, Action<IFriendList> callback)
         {
-            var row = _database.ExecuteQuery(
-                "SELECT user, friend, request FROM Friends WHERE user = @user OR request = @request;",
+            var rows = _database.ExecuteQuery(
+                "SELECT user, friend, request FROM Friends WHERE user = @user OR friend = @friend OR request = @request;",
                 new QueryParameter("@user", MySqlDbType.VarChar, 60, "user", _database.EscapeString(username)),
+                new QueryParameter("@friend", MySqlDbType.VarChar, 60, "friend", _database.EscapeString(username)),
                 new QueryParameter("@request", MySqlDbType.VarChar, 60, "request", _database.EscapeString(username)));
 
 
@@ -112,26 +113,36 @@ namespace MySQLConnector
             var outRequests = new List<string>();
             var inRequests = new List<string>();
 
-            foreach (var friend in row)
+            foreach (var row in rows)
             {
-                var relation = friend.GetRow();
+                var relation = row.GetRow();
+                var user = Convert.ToString(relation["user"]);
+                var friend = Convert.ToString(relation["friend"]);
+                var request = Convert.ToString(relation["request"]);
 
-                if (relation["user"].ToString() == username)
+                if (user == username)
                 {
-                    if (relation["friend"].ToString() != null && relation["friend"].ToString() != "")
+                    if (!string.IsNullOrEmpty(friend))
                     {
-                        friends.Add(relation["friend"].ToString());
+                        friends.Add(friend);
                     }
                     else
                     {
-                        outRequests.Add(relation["request"].ToString());
+                        outRequests.Add(request);
+                    }
+                }
+                else if (friend == username)
+                {
+                    if (!string.IsNullOrEmpty(user))
+                    {
+                        friends.Add(user);
                     }
                 }
                 else
                 {
-                    if (relation["request"].ToString() == username)
+                    if (request == username)
                     {
-                        inRequests.Add(relation["user"].ToString());
+                        inRequests.Add(user);
                     }
                 }
             }
