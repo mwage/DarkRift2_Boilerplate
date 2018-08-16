@@ -22,7 +22,7 @@ namespace MySQLConnector
             var row = _database.ExecuteQuery(
                 "SELECT ID, username, password FROM Users WHERE username = @userName LIMIT 1;",
                 new QueryParameter("@userName", MySqlDbType.VarChar, 60, "username", _database.EscapeString(username)));
-            callback(new User(Convert.ToString(row[0]["username"]), Convert.ToString(row[0]["password"])));
+            callback(new User((string)row[0]["username"], (string)row[0]["password"]));
         }
 
         public void UsernameAvailable(string username, Action<bool> callback)
@@ -116,9 +116,9 @@ namespace MySQLConnector
             foreach (var row in rows)
             {
                 var relation = row.GetRow();
-                var user = Convert.ToString(relation["user"]);
-                var friend = Convert.ToString(relation["friend"]);
-                var request = Convert.ToString(relation["request"]);
+                var user = (string)relation["user"];
+                var friend = (string)relation["friend"];
+                var request = (string)relation["request"];
 
                 if (user == username)
                 {

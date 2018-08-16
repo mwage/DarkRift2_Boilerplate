@@ -123,7 +123,8 @@ namespace MySQLConnector
                     }
 
                     connection.Open();
-                    return command.ExecuteScalar();
+                    var obj = command.ExecuteScalar();
+                    return obj != null && obj != DBNull.Value ? obj : null;
                 }
             }
         }
@@ -153,10 +154,7 @@ namespace MySQLConnector
                             //And add each field to it
                             for (var i = 0; i < fieldCount; i++)
                             {
-                                row.Add(
-                                    reader.GetName(i),
-                                    reader.GetValue(i)
-                                );
+                                row.Add(reader.GetName(i), !reader.IsDBNull(i) ? reader.GetValue(i) : null);
                             }
 
                             //Add it to the rows
